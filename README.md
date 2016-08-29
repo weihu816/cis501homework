@@ -2,8 +2,8 @@ This is the git project for homework assignments in [CIS 501: Fall 2016](http://
 
 This code is written in Java and setup as an ant project. To get started:
 
-# clone the repo
+1. clone the repo
 
-# from the root directory of the repo, run `ant test`. This will build the code
+1. from the root directory of the repo, run `ant test`. This will build the code
 and run one simple test case. The test case will fail but the build itself
 should succeed.
