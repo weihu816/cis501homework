@@ -3,12 +3,12 @@ package cis501;
 import java.util.StringTokenizer;
 
 /** Class representing a single micro-op. */
-public final class Insn {
+public class Insn {
 
     /** Destination register. Value will be in range [-1,15]. */
     public final short dstReg;
 
-    /** Input 1 for ALU ops, or address for loads, reg-to-be-stored for stores. Value will be in range [-1,15]. */
+    /** Input 1 for ALU ops, or address for loads, value-to-be-stored for stores. Value will be in range [-1,15]. */
     public final short srcReg1;
 
     /** Input 2 for ALU ops, or address for stores. Value will be in range [-1,15]. */
