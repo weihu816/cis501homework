@@ -33,10 +33,12 @@ enum Stage {
 
 public class InorderPipeline implements IInorderPipeline {
 
+    // ----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     /* Five stages herer: F D X M W */
     private Insn[] latches = new Insn[Stage.NUM_STAGES];
-    /* Given Parameters */
-    private int additionalMemLatency;
+    /* Pipeline Parameters */
+    private int additionalMemLatency = 0, currentMemTimer = 0;
     private Set<Bypass> bypasses;
     /* Running Statics */
     private int insnCounter = 0;
@@ -66,14 +68,12 @@ public class InorderPipeline implements IInorderPipeline {
     public void run(Iterable<Insn> ii) {
         Iterator<Insn> insnIterator = ii.iterator();
         while (insnIterator.hasNext() || !isEmpty()) {
+//            print();
             advance(insnIterator);
             cycleCounter++;
         }
     }
 
-    // ----------------------------------------------------------------------
-    // Pipeline Stage Latches Operations
-    // ----------------------------------------------------------------------
     @Override
     public long getInsns() {
         return insnCounter;
@@ -84,6 +84,9 @@ public class InorderPipeline implements IInorderPipeline {
         return cycleCounter;
     }
 
+    // ----------------------------------------------------------------------
+    // Pipeline Stage Latches Operations
+    // ----------------------------------------------------------------------
     public Insn getInsn(Stage stage) {
         return latches[stage.i()];
     }
@@ -110,6 +113,10 @@ public class InorderPipeline implements IInorderPipeline {
         insnCounter++;
     }
 
+    /**
+     * Pipeline Logic
+     * @param iterator
+     */
     public void advance(Iterator<Insn> iterator) {
         // Current stages snapshot
         Insn wi = getInsn(Stage.WRITEBACK);
@@ -117,21 +124,56 @@ public class InorderPipeline implements IInorderPipeline {
         Insn xi = getInsn(Stage.EXECUTE);
         Insn di = getInsn(Stage.DECODE);
         Insn fi = getInsn(Stage.FETCH);
-        // Advance the pipeline in the reverse order
+        /* ---------- WRITEBACK ---------- */
         advance(Stage.WRITEBACK);
+
+        /* ----------  MEMORY   ---------- */
+        // TODO: other condition
+        if (!checkMemDelay(mi)) {
+            currentMemTimer++;
+            return;
+        }
         advance(Stage.MEMORY);
+        currentMemTimer = 0;
+
+        /* ----------  EXECUTE  ---------- */
+        if (getInsn(Stage.MEMORY) != null) { return; }
         advance(Stage.EXECUTE);
+
+        /* ----------   DECODE  ---------- */
         // Stall on Load-To-Use Dependence
-        if (stallOnLoadToUseDependence(di, xi)) { return; }
+        if (stallOnLoadToUseDependence(di, xi) || getInsn(Stage.EXECUTE) != null) { return; }
         advance(Stage.DECODE);
+
+        /* ----------   FETCH   ---------- */
+        if (getInsn(Stage.DECODE) != null) { return; }
         advance(Stage.FETCH);
         if (iterator.hasNext()) { fetchInsn(iterator.next()); }
         else { clear(Stage.FETCH); }
+    }
+
+    public void print() {
+        Insn wi = getInsn(Stage.WRITEBACK);
+        Insn mi = getInsn(Stage.MEMORY);
+        Insn xi = getInsn(Stage.EXECUTE);
+        Insn di = getInsn(Stage.DECODE);
+        Insn fi = getInsn(Stage.FETCH);
+        System.out.println("--------------------------------------------------");
+        System.out.println(wi == null ? "/" : wi.toString());
+        System.out.println(mi == null ? "/" :mi.toString());
+        System.out.println(xi == null ? "/" :xi.toString());
+        System.out.println(di == null ? "/" :di.toString());
+        System.out.println(fi == null ? "/" :fi.toString());
     }
 
     private boolean stallOnLoadToUseDependence(Insn di, Insn xi) {
         if (di == null || xi == null) return false;
         return (xi.mem == MemoryOp.Load) && ( (di.srcReg2 == xi.dstReg) ||
                 ((di.srcReg1 == xi.dstReg) && (di.mem != MemoryOp.Store)));
+    }
+
+    private boolean checkMemDelay(Insn mi) {
+        if (mi == null || mi.mem == null) return true;
+        return currentMemTimer >= additionalMemLatency;
     }
 }
