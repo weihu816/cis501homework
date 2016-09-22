@@ -68,7 +68,6 @@ public class InorderPipeline implements IInorderPipeline {
     public void run(Iterable<Insn> ii) {
         Iterator<Insn> insnIterator = ii.iterator();
         while (insnIterator.hasNext() || !isEmpty()) {
-//            print();
             advance(insnIterator);
             cycleCounter++;
         }
@@ -119,20 +118,17 @@ public class InorderPipeline implements IInorderPipeline {
      */
     public void advance(Iterator<Insn> iterator) {
         // Current stages snapshot
-        Insn wi = getInsn(Stage.WRITEBACK);
-        Insn mi = getInsn(Stage.MEMORY);
-        Insn xi = getInsn(Stage.EXECUTE);
-        Insn di = getInsn(Stage.DECODE);
-        Insn fi = getInsn(Stage.FETCH);
+        final Insn wi = getInsn(Stage.WRITEBACK);
+        final Insn mi = getInsn(Stage.MEMORY);
+        final Insn xi = getInsn(Stage.EXECUTE);
+        final Insn di = getInsn(Stage.DECODE);
+
         /* ---------- WRITEBACK ---------- */
         advance(Stage.WRITEBACK);
 
         /* ----------  MEMORY   ---------- */
-        // TODO: other condition
-        if (!checkMemDelay(mi)) {
-            currentMemTimer++;
-            return;
-        }
+        if (!checkMemDelay(mi)) { return; }
+        if (getInsn(Stage.WRITEBACK) != null) { return; }
         advance(Stage.MEMORY);
         currentMemTimer = 0;
 
@@ -142,7 +138,7 @@ public class InorderPipeline implements IInorderPipeline {
 
         /* ----------   DECODE  ---------- */
         // Stall on Load-To-Use Dependence
-        if (stallOnLoadToUseDependence(di, xi) || getInsn(Stage.EXECUTE) != null) { return; }
+        if (getInsn(Stage.EXECUTE) != null || stallOnD(di, xi, mi)) { return; }
         advance(Stage.DECODE);
 
         /* ----------   FETCH   ---------- */
@@ -166,14 +162,61 @@ public class InorderPipeline implements IInorderPipeline {
         System.out.println(fi == null ? "/" :fi.toString());
     }
 
+    private boolean checkMemDelay(Insn mi) {
+        if (mi == null || mi.mem == null) return true;
+        boolean result =  currentMemTimer >= additionalMemLatency;
+        if (!result) { currentMemTimer++; }
+        return result;
+    }
+
+    private boolean stallOnD(Insn di, Insn xi, Insn mi) {
+        if (di == null) return false;
+        if (stallOnLoadToUseDependence(di, xi)) return true;
+
+        // If di require from xi
+        if (xi != null && (di.srcReg1 == xi.dstReg || di.srcReg2 == xi.dstReg || di.dstReg == xi.dstReg)) {
+            if (xi.mem != null) { // Load/Store
+                if (di.mem != null) {
+                    if (di.srcReg1 == xi.dstReg)
+                        if (!bypasses.contains(Bypass.WM)) return true;
+                    if (di.dstReg == xi.dstReg)
+                        if (!bypasses.contains(Bypass.WX)) return true;
+                } else { // add
+                    if (!bypasses.contains(Bypass.WX)) return true;
+                }
+            } else { // ADD
+                if (di.mem != null) {
+                    if (di.mem == MemoryOp.Store && di.srcReg1 == xi.dstReg) {
+                        if (!bypasses.contains(Bypass.WM)) return true;
+                    } else if (di.mem == MemoryOp.Load && di.srcReg1 == xi.dstReg) {
+                        if (!bypasses.contains(Bypass.MX)) return true;
+                        if (!bypasses.contains(Bypass.WX)) return true;
+                    }
+                } else {
+                    if (!bypasses.contains(Bypass.MX)) return true;
+                    if (!bypasses.contains(Bypass.WX)) return true;
+                }
+            }
+        }
+
+        if (mi != null && (di.srcReg1 == mi.dstReg || di.srcReg2 == mi.dstReg)) {
+            if (mi.mem != null) { // Load/Store
+
+            } else {
+
+            }
+        }
+
+        return false;
+    }
+
     private boolean stallOnLoadToUseDependence(Insn di, Insn xi) {
         if (di == null || xi == null) return false;
         return (xi.mem == MemoryOp.Load) && ( (di.srcReg2 == xi.dstReg) ||
                 ((di.srcReg1 == xi.dstReg) && (di.mem != MemoryOp.Store)));
     }
 
-    private boolean checkMemDelay(Insn mi) {
-        if (mi == null || mi.mem == null) return true;
-        return currentMemTimer >= additionalMemLatency;
-    }
+    // lw $4,8($3) => add $3<-$2,$1
+
+
 }
