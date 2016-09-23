@@ -221,10 +221,10 @@ public class InorderPipeline implements IInorderPipeline {
                     // D is MEM
                     // Store => Load
                     if (di.mem == MemoryOp.Store && mi.mem == MemoryOp.Load && di.dstReg == mi.dstReg) {
-                        if (di.dstReg == xi.dstReg) {
+                        if (di.dstReg == mi.dstReg) {
                             if (!bypasses.contains(Bypass.WX)) return true;
                         }
-                        if (di.srcReg1 == xi.dstReg) {
+                        if (di.srcReg1 == mi.dstReg) {
                             if (!bypasses.contains(Bypass.MX)) return true;
                         }
                     }
@@ -240,10 +240,10 @@ public class InorderPipeline implements IInorderPipeline {
                 if ((di.srcReg1 == mi.dstReg || di.srcReg2 == mi.dstReg)) {
                     if (di.mem != null) {
                         // D is Load/Store
-                        if (di.mem == MemoryOp.Load && di.srcReg1 == xi.dstReg) {
+                        if (di.mem == MemoryOp.Load && di.srcReg1 == mi.dstReg) {
                             if (!bypasses.contains(Bypass.WX)) return true;
                         }
-                        if (di.mem == MemoryOp.Store && di.dstReg == xi.dstReg) {
+                        if (di.mem == MemoryOp.Store && di.dstReg == mi.dstReg) {
                             if (!bypasses.contains(Bypass.WX)) return true;
                         }
                     } else {
