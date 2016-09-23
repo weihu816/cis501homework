@@ -42,7 +42,7 @@ public class InorderPipeline implements IInorderPipeline {
     /* Running Statics */
     private int insnCounter = 0;
     private int cycleCounter = 0;
-
+    private int count = 0;
     /**
      * Create a new pipeline with the given additional memory latency.
      *
@@ -71,6 +71,7 @@ public class InorderPipeline implements IInorderPipeline {
             cycleCounter++;
             // print(cycleCounter);
         }
+        System.out.println(count +  " !!!");
     }
 
     @Override
@@ -171,16 +172,19 @@ public class InorderPipeline implements IInorderPipeline {
 
     private boolean stallOnD(Insn di, Insn xi, Insn mi) {
         if (di == null) return false;
-        if (stallOnLoadToUseDependence(di, xi)) return true;
+        if (stallOnLoadToUseDependence(di, xi)) {
+            count++;
+            return true;
+        }
 
         if (xi != null) {
             if (xi.mem != null) { // X is Load/Store
                 if (di.mem != null) { // D is Mem
                     // Store => Load
                     if (di.mem == MemoryOp.Store && xi.mem == MemoryOp.Load) {
-                        if (di.srcReg2 == xi.dstReg) return true;
+                        //if (di.srcReg2 == xi.dstReg) return true;
                         if (di.srcReg1 == xi.dstReg && !bypasses.contains(Bypass.WM)) return true;
-                    } else if (di.mem == MemoryOp.Load && xi.mem == MemoryOp.Load && di.dstReg == xi.dstReg) return true;
+                    } else if (di.mem == MemoryOp.Load && xi.mem == MemoryOp.Load && di.srcReg1 == xi.dstReg) return true;
                 }
             } else { // X is ADD
                 if ((di.srcReg1 == xi.dstReg || di.srcReg2 == xi.dstReg)) {
@@ -205,7 +209,7 @@ public class InorderPipeline implements IInorderPipeline {
                     // Store => Load
                     if (di.mem == MemoryOp.Store && mi.mem == MemoryOp.Load) {
                         if (di.srcReg2 == mi.dstReg && !bypasses.contains(Bypass.WX)) return true;
-                    } else if (di.mem == MemoryOp.Load && mi.mem == MemoryOp.Load && di.dstReg == mi.dstReg) {
+                    } else if (di.mem == MemoryOp.Load && mi.mem == MemoryOp.Load && di.srcReg1 == mi.dstReg) {
                         if (!bypasses.contains(Bypass.WX)) return true;
                     }
                 }  else { // D is ADD
@@ -219,7 +223,7 @@ public class InorderPipeline implements IInorderPipeline {
                             if (di.srcReg1 == mi.dstReg && !bypasses.contains(Bypass.WX)) return true;
                         }
                         if (di.mem == MemoryOp.Store) {
-                            if ((di.srcReg2 == mi.dstReg || di.srcReg1 == mi.dstReg) && !bypasses.contains(Bypass.WX)) return true;
+                            if ((di.srcReg2 == mi.dstReg) && !bypasses.contains(Bypass.WX)) return true;
                         }
                     } else { // D is ADD
                         if (!bypasses.contains(Bypass.WX)) return true;
