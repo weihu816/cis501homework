@@ -178,9 +178,13 @@ public class InorderPipeline implements IInorderPipeline {
                 if (di.mem != null) { // D is Mem
                     // Store => Load
                     if (di.mem == MemoryOp.Store && xi.mem == MemoryOp.Load) {
-                        if (di.srcReg2 == xi.dstReg) return true;
+                        //****** case 1 load to use did stall already! check the WX bypass
+                        //if (di.srcReg2 == xi.dstReg) return true;
+                        if (di.srcReg2 == xi.dstReg && !bypasses.contains(Bypass.WX)) return true;
                         if (di.srcReg1 == xi.dstReg && !bypasses.contains(Bypass.WM)) return true;
-                    } else if (di.mem == MemoryOp.Load && xi.mem == MemoryOp.Load && di.dstReg == xi.dstReg) return true;
+                    } else if (di.mem == MemoryOp.Load && xi.mem == MemoryOp.Load && di.dstReg == xi.dstReg)
+                        //****** why stall here?  WAW, no need...
+                        return true;
                 }
             } else { // X is ADD
                 if ((di.srcReg1 == xi.dstReg || di.srcReg2 == xi.dstReg)) {
@@ -206,6 +210,7 @@ public class InorderPipeline implements IInorderPipeline {
                     if (di.mem == MemoryOp.Store && mi.mem == MemoryOp.Load) {
                         if (di.srcReg2 == mi.dstReg && !bypasses.contains(Bypass.WX)) return true;
                     } else if (di.mem == MemoryOp.Load && mi.mem == MemoryOp.Load && di.dstReg == mi.dstReg) {
+                        // why
                         if (!bypasses.contains(Bypass.WX)) return true;
                     }
                 }  else { // D is ADD
@@ -219,6 +224,7 @@ public class InorderPipeline implements IInorderPipeline {
                             if (di.srcReg1 == mi.dstReg && !bypasses.contains(Bypass.WX)) return true;
                         }
                         if (di.mem == MemoryOp.Store) {
+                            // if src1 then no need? data ok at M stage
                             if ((di.srcReg2 == mi.dstReg || di.srcReg1 == mi.dstReg) && !bypasses.contains(Bypass.WX)) return true;
                         }
                     } else { // D is ADD
