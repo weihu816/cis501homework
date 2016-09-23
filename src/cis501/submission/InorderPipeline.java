@@ -182,7 +182,7 @@ public class InorderPipeline implements IInorderPipeline {
                 if (di.mem != null) { // D is Mem
                     // Store => Load
                     if (di.mem == MemoryOp.Store && xi.mem == MemoryOp.Load) {
-                        //if (di.srcReg2 == xi.dstReg) return true;
+                        if (di.srcReg2 == xi.dstReg) return true;
                         if (di.srcReg1 == xi.dstReg && !bypasses.contains(Bypass.WM)) return true;
                     } else if (di.mem == MemoryOp.Load && xi.mem == MemoryOp.Load && di.srcReg1 == xi.dstReg) return true;
                 }
