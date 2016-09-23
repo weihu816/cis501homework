@@ -180,14 +180,19 @@ public class InorderPipeline implements IInorderPipeline {
                 if (di.mem != null) {
                     // D is Mem
                     // Store => Load
-                    if (di.mem == MemoryOp.Store && xi.mem == MemoryOp.Load && di.dstReg == xi.dstReg) {
-                        return true;
+                    if (di.mem == MemoryOp.Store && xi.mem == MemoryOp.Load ) {
+                        if (di.dstReg == xi.dstReg) {
+                            return true;
+                        }
+                        if (di.srcReg1 == xi.dstReg) {
+                            if (!bypasses.contains(Bypass.MX)) return true;
+                        }
                     }
                 } else {
                     // D is ADD
                     if (xi.mem == MemoryOp.Load) {
                         // stallOnLoadToUseDependence special case
-                        // if (xi.dstReg == di.srcReg1 || xi.dstReg == di.srcReg2) return true;
+                        if (xi.dstReg == di.srcReg1 || xi.dstReg == di.srcReg2) return true;
                     }
                 }
             } else {
@@ -195,11 +200,11 @@ public class InorderPipeline implements IInorderPipeline {
                 if ((di.srcReg1 == xi.dstReg || di.srcReg2 == xi.dstReg)) {
                     if (di.mem != null) {
                         // D is Load/Store
-                        if (di.mem == MemoryOp.Store && di.srcReg1 == xi.dstReg) {
-                            if (!bypasses.contains(Bypass.WM)) return true;
-                        } else if (di.mem == MemoryOp.Load && di.srcReg1 == xi.dstReg) {
+                        if (di.mem == MemoryOp.Load && di.srcReg1 == xi.dstReg) {
                             if (!bypasses.contains(Bypass.MX)) return true;
-                            if (!bypasses.contains(Bypass.WX)) return true;
+                        }
+                        if (di.mem == MemoryOp.Store && di.dstReg == xi.dstReg) {
+                            if (!bypasses.contains(Bypass.MX)) return true;
                         }
                     } else {
                         // D is ADD
@@ -216,13 +221,18 @@ public class InorderPipeline implements IInorderPipeline {
                     // D is MEM
                     // Store => Load
                     if (di.mem == MemoryOp.Store && mi.mem == MemoryOp.Load && di.dstReg == mi.dstReg) {
-                        if (!bypasses.contains(Bypass.WX)) return true;
+                        if (di.dstReg == xi.dstReg) {
+                            if (!bypasses.contains(Bypass.WX)) return true;
+                        }
+                        if (di.srcReg1 == xi.dstReg) {
+                            if (!bypasses.contains(Bypass.MX)) return true;
+                        }
                     }
                 } else {
                     // D is ADD
                     if (mi.mem == MemoryOp.Load) {
                         // stallOnLoadToUseDependence special case
-                        // if (!bypasses.contains(Bypass.WX)) return true;
+                        if (!bypasses.contains(Bypass.WX)) return true;
                     }
                 }
             } else {
@@ -230,6 +240,12 @@ public class InorderPipeline implements IInorderPipeline {
                 if ((di.srcReg1 == mi.dstReg || di.srcReg2 == mi.dstReg)) {
                     if (di.mem != null) {
                         // D is Load/Store
+                        if (di.mem == MemoryOp.Load && di.srcReg1 == xi.dstReg) {
+                            if (!bypasses.contains(Bypass.WX)) return true;
+                        }
+                        if (di.mem == MemoryOp.Store && di.dstReg == xi.dstReg) {
+                            if (!bypasses.contains(Bypass.WX)) return true;
+                        }
                     } else {
                         // D is ADD
                         if (!bypasses.contains(Bypass.WX)) return true;
