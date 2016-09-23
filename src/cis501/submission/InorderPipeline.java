@@ -185,6 +185,8 @@ public class InorderPipeline implements IInorderPipeline {
                     } else if (di.mem == MemoryOp.Load && xi.mem == MemoryOp.Load && di.dstReg == xi.dstReg)
                         //****** why stall here?  WAW, no need...
                         return true;
+                        // **** should be
+                        // ***************if (di.srcReg1 == xi.dstReg && !bypasses.contains(Bypass.WX)) return true;
                 }
             } else { // X is ADD
                 if ((di.srcReg1 == xi.dstReg || di.srcReg2 == xi.dstReg)) {
