@@ -345,9 +345,19 @@ public class InorderPipelineSampleTest {
 
     @Test
     public void testTsraceFile() {
+        for (int i = 0; i <= 5; i++) {
+            InsnIterator uiter = new InsnIterator("/Users/apple/Desktop/streamcluster-10M-v1.trace.gz", -1);
+            IInorderPipeline sim_test = new InorderPipeline(i/*no add'l memory latency*/, Bypass.FULL_BYPASS);
+            sim_test.run(uiter);
+            System.out.println((double) sim_test.getInsns() / sim_test.getCycles());
+        }
+    }
+
+    @Test
+    public void testTsraceFile2() {
         InsnIterator uiter = new InsnIterator("/Users/apple/Desktop/streamcluster-10M-v1.trace.gz", -1);
-        sim.run(uiter);
-        System.out.println(sim.getInsns());
-        System.out.println(sim.getCycles());
+        IInorderPipeline sim_test = new InorderPipeline(0/*no add'l memory latency*/, Bypass.FULL_BYPASS);
+        sim_test.run(uiter);
+        System.out.println(sim_test.getCycles());
     }
 }

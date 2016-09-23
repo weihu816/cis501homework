@@ -71,7 +71,7 @@ public class InorderPipeline implements IInorderPipeline {
             cycleCounter++;
             // print(cycleCounter);
         }
-        System.out.println(count +  " !!!");
+         System.out.println(count +  " !!!");
     }
 
     @Override
@@ -145,8 +145,10 @@ public class InorderPipeline implements IInorderPipeline {
         /* ----------   FETCH   ---------- */
         if (getInsn(Stage.DECODE) != null) { return; }
         advance(Stage.FETCH);
-        if (iterator.hasNext()) { fetchInsn(iterator.next()); }
-        else { clear(Stage.FETCH); }
+        if (iterator.hasNext()) {
+            Insn tmp = iterator.next();
+            fetchInsn(tmp);
+        }
     }
 
     public void print(int i) {
@@ -156,11 +158,11 @@ public class InorderPipeline implements IInorderPipeline {
         Insn di = getInsn(Stage.DECODE);
         Insn fi = getInsn(Stage.FETCH);
         System.out.println("-------------------------------------------------- " + i);
-        System.out.println(wi == null ? "/" : wi.toString());
-        System.out.println(mi == null ? "/" :mi.toString());
-        System.out.println(xi == null ? "/" :xi.toString());
-        System.out.println(di == null ? "/" :di.toString());
-        System.out.println(fi == null ? "/" :fi.toString());
+        System.out.println(wi == null ? "/" : wi.mem + " " + wi.toString());
+        System.out.println(mi == null ? "/" : mi.mem + " " + mi.toString());
+        System.out.println(xi == null ? "/" : xi.mem + " " + xi.toString());
+        System.out.println(di == null ? "/" : di.mem + " " + di.toString());
+        System.out.println(fi == null ? "/" : fi.mem + " " + fi.toString());
     }
 
     private boolean checkMemDelay(Insn mi) {
@@ -172,11 +174,11 @@ public class InorderPipeline implements IInorderPipeline {
 
     private boolean stallOnD(Insn di, Insn xi, Insn mi) {
         if (di == null) return false;
+        // if (di.branch != null) return false;
         if (stallOnLoadToUseDependence(di, xi)) {
             count++;
             return true;
         }
-
         if (xi != null) {
             if (xi.mem != null) { // X is Load/Store
                 if (di.mem != null) { // D is Mem
