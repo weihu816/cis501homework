@@ -42,7 +42,7 @@ public class InorderPipeline implements IInorderPipeline {
     /* Running Statics */
     private int insnCounter = 0;
     private int cycleCounter = 0;
-    private int count = 0;
+
     /**
      * Create a new pipeline with the given additional memory latency.
      *
@@ -119,7 +119,6 @@ public class InorderPipeline implements IInorderPipeline {
      */
     public void advance(Iterator<Insn> iterator) {
         // Current stages snapshot
-        final Insn wi = getInsn(Stage.WRITEBACK);
         final Insn mi = getInsn(Stage.MEMORY);
         final Insn xi = getInsn(Stage.EXECUTE);
         final Insn di = getInsn(Stage.DECODE);
@@ -176,7 +175,6 @@ public class InorderPipeline implements IInorderPipeline {
         if (di == null) return false;
         // if (di.branch != null || (xi != null && xi.branch != null)) return false;
         if (stallOnLoadToUseDependence(di, xi)) {
-            count++;
             return true;
         }
         if (xi != null) {
@@ -186,7 +184,7 @@ public class InorderPipeline implements IInorderPipeline {
                     if (di.mem == MemoryOp.Store && xi.mem == MemoryOp.Load) {
                         if ((di.srcReg2 != -1) && di.srcReg2 == xi.dstReg) return true;
                         if ((di.srcReg1 != -1) && di.srcReg1 == xi.dstReg && !bypasses.contains(Bypass.WM)) return true;
-                    } else if (di.mem == MemoryOp.Load && xi.mem == MemoryOp.Load && di.srcReg1 == xi.dstReg) return true;
+                    } else if ((di.srcReg1 != -1) && di.mem == MemoryOp.Load && xi.mem == MemoryOp.Load && di.srcReg1 == xi.dstReg) return true;
                 }
             } else { // X is ADD
                 if ((xi.dstReg != -1) && (di.srcReg1 == xi.dstReg || di.srcReg2 == xi.dstReg)) {

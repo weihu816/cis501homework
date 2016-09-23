@@ -349,6 +349,7 @@ public class InorderPipelineSampleTest {
             InsnIterator uiter = new InsnIterator("/Users/apple/Desktop/streamcluster-10M-v1.trace.gz", -1);
             IInorderPipeline sim_test = new InorderPipeline(i/*no add'l memory latency*/, Bypass.FULL_BYPASS);
             sim_test.run(uiter);
+            System.out.println(sim_test.getCycles());
             System.out.println((double) sim_test.getInsns() / sim_test.getCycles());
         }
     }
