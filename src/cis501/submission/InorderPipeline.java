@@ -71,7 +71,7 @@ public class InorderPipeline implements IInorderPipeline {
             cycleCounter++;
             // print(cycleCounter);
         }
-         System.out.println(count +  " !!!");
+        // System.out.println(count +  " !!!");
     }
 
     @Override
@@ -174,7 +174,7 @@ public class InorderPipeline implements IInorderPipeline {
 
     private boolean stallOnD(Insn di, Insn xi, Insn mi) {
         if (di == null) return false;
-        // if (di.branch != null) return false;
+        // if (di.branch != null || (xi != null && xi.branch != null)) return false;
         if (stallOnLoadToUseDependence(di, xi)) {
             count++;
             return true;
@@ -184,12 +184,12 @@ public class InorderPipeline implements IInorderPipeline {
                 if (di.mem != null) { // D is Mem
                     // Store => Load
                     if (di.mem == MemoryOp.Store && xi.mem == MemoryOp.Load) {
-                        if (di.srcReg2 == xi.dstReg) return true;
-                        if (di.srcReg1 == xi.dstReg && !bypasses.contains(Bypass.WM)) return true;
+                        if ((di.srcReg2 != -1) && di.srcReg2 == xi.dstReg) return true;
+                        if ((di.srcReg1 != -1) && di.srcReg1 == xi.dstReg && !bypasses.contains(Bypass.WM)) return true;
                     } else if (di.mem == MemoryOp.Load && xi.mem == MemoryOp.Load && di.srcReg1 == xi.dstReg) return true;
                 }
             } else { // X is ADD
-                if ((di.srcReg1 == xi.dstReg || di.srcReg2 == xi.dstReg)) {
+                if ((xi.dstReg != -1) && (di.srcReg1 == xi.dstReg || di.srcReg2 == xi.dstReg)) {
                     if (di.mem != null) { // D is Load/Store
                         if (di.mem == MemoryOp.Load) {
                             if (di.srcReg1 == xi.dstReg && !bypasses.contains(Bypass.MX)) return true;
@@ -210,8 +210,8 @@ public class InorderPipeline implements IInorderPipeline {
                 if (di.mem != null) { // D is MEM
                     // Store => Load
                     if (di.mem == MemoryOp.Store && mi.mem == MemoryOp.Load) {
-                        if (di.srcReg2 == mi.dstReg && !bypasses.contains(Bypass.WX)) return true;
-                    } else if (di.mem == MemoryOp.Load && mi.mem == MemoryOp.Load && di.srcReg1 == mi.dstReg) {
+                        if ((di.srcReg2 != -1) && di.srcReg2 == mi.dstReg && !bypasses.contains(Bypass.WX)) return true;
+                    } else if ((di.srcReg1 != -1) && di.mem == MemoryOp.Load && mi.mem == MemoryOp.Load && di.srcReg1 == mi.dstReg) {
                         if (!bypasses.contains(Bypass.WX)) return true;
                     }
                 }  else { // D is ADD
@@ -219,7 +219,7 @@ public class InorderPipeline implements IInorderPipeline {
                 }
             } else {
                 // X is ADD
-                if ((di.srcReg1 == mi.dstReg || di.srcReg2 == mi.dstReg)) {
+                if ((mi.dstReg != -1) && (di.srcReg1 == mi.dstReg || di.srcReg2 == mi.dstReg)) {
                     if (di.mem != null) { // D is Load/Store
                         if (di.mem == MemoryOp.Load) {
                             if (di.srcReg1 == mi.dstReg && !bypasses.contains(Bypass.WX)) return true;
@@ -233,13 +233,12 @@ public class InorderPipeline implements IInorderPipeline {
                 }
             }
         }
-
         return false;
     }
 
     private boolean stallOnLoadToUseDependence(Insn di, Insn xi) {
         if (di == null || xi == null) return false;
-        return (xi.mem == MemoryOp.Load) && ( (di.srcReg2 == xi.dstReg) ||
-                ((di.srcReg1 == xi.dstReg) && (di.mem != MemoryOp.Store)));
+        return (xi.mem == MemoryOp.Load) && ( (di.srcReg2 != -1) && (di.srcReg2 == xi.dstReg) ||
+                ((di.srcReg1 != -1) && (di.srcReg1 == xi.dstReg) && (di.mem != MemoryOp.Store)));
     }
 }
