@@ -1,9 +1,6 @@
 package cis501.submission;
 
-import cis501.Bypass;
-import cis501.IInorderPipeline;
-import cis501.Insn;
-import cis501.MemoryOp;
+import cis501.*;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -15,7 +12,7 @@ import static org.junit.Assert.assertEquals;
 
 public class InorderPipelineSampleTest {
 
-    private static IInorderPipeline sim, sim_d, sim_wm, sim_wx, sim_mx, sim_wm_wx;
+    private static IInorderPipeline sim, sim_d, sim_wm, sim_wx, sim_mx, sim_wm_wx, sim_mx_wx, sim_mx_wm, sim_no;
 
     private static Insn makeInsn(int dst, int src1, int src2, MemoryOp mop) {
         return new Insn(dst, src1, src2,
@@ -32,7 +29,10 @@ public class InorderPipelineSampleTest {
         sim_wm = new InorderPipeline(0/*no add'l memory latency*/, EnumSet.of(Bypass.WM));
         sim_wx = new InorderPipeline(0/*no add'l memory latency*/, EnumSet.of(Bypass.WX));
         sim_mx = new InorderPipeline(0/*no add'l memory latency*/, EnumSet.of(Bypass.MX));
-        sim_wm_wx = new InorderPipeline(0/*no add'l memory latency*/, EnumSet.of(Bypass.MX, Bypass.WX));
+        sim_wm_wx = new InorderPipeline(0/*no add'l memory latency*/, EnumSet.of(Bypass.WM, Bypass.WX));
+        sim_mx_wx = new InorderPipeline(0/*no add'l memory latency*/, EnumSet.of(Bypass.MX, Bypass.WX));
+        sim_mx_wm = new InorderPipeline(0/*no add'l memory latency*/, EnumSet.of(Bypass.MX, Bypass.WM));
+        sim_no = new InorderPipeline(0/*no add'l memory latency*/, Bypass.NO_BYPASS);
     }
 
     @Test
@@ -135,6 +135,7 @@ public class InorderPipelineSampleTest {
         assertEquals(expected, sim.getCycles());
     }
 
+
     // ------------------------------------------------------------
     // Test with additional memory delay
     // ------------------------------------------------------------
@@ -185,10 +186,85 @@ public class InorderPipelineSampleTest {
     }
 
     // ------------------------------------------------------------
+    // NO Harzard
+    // ------------------------------------------------------------
+    @Test
+    public void testNoHarzard1() {
+        List<Insn> insns = new LinkedList<>();
+        insns.add(makeInsn(1, 2, 3, null));
+        insns.add(makeInsn(1, 2, 3, null));
+        sim_wm.run(insns);
+        sim_wx.run(insns);
+        sim_mx.run(insns);
+        sim_wm_wx.run(insns);
+        sim_mx_wx.run(insns);
+        sim_mx_wm.run(insns);
+        sim_no.run(insns);
+        sim.run(insns);
+        assertEquals(2, sim_wm.getInsns());
+        assertEquals(7, sim_wx.getCycles());
+        assertEquals(7, sim_mx.getCycles());
+        assertEquals(7, sim_wm_wx.getCycles());
+        assertEquals(7, sim_mx_wx.getCycles());
+        assertEquals(7, sim_mx_wm.getCycles());
+        assertEquals(7, sim_no.getCycles());
+        assertEquals(7, sim.getCycles());
+    }
+
+    // ------------------------------------------------------------
+    // No Bypassing
+    // ------------------------------------------------------------
+    @Test
+    public void test1NO1() {
+        List<Insn> insns = new LinkedList<>();
+        insns.add(makeInsn(1, 2, 3, null));
+        insns.add(makeInsn(1, 2, 3, null));
+        insns.add(makeInsn(2, 1, 4, null));
+        sim_no.run(insns);
+        //                  123456789a
+        // add r1 <- r2,r3  FDXMW    |
+        // sub r1 <- r2,r3   FDXMW   |
+        // xor r2 <- r1,r4    FD..XMW|
+        assertEquals(3, sim_no.getInsns());
+        assertEquals(10, sim_no.getCycles());
+    }
+
+    // ------------------------------------------------------------
+    // WX
+    // ------------------------------------------------------------
+    @Test
+    public void test1WX1() {
+        List<Insn> insns = new LinkedList<>();
+        insns.add(makeInsn(1, 2, 3, null));
+        insns.add(makeInsn(1, 2, 3, null));
+        insns.add(makeInsn(2, 1, 4, null));
+        sim_wx.run(insns);
+        //                 123456789a
+        // add r1 <- r2,r3 FDXMW   |
+        // sub r1 <- r2,r3  FDXMW  |
+        // xor r2 <- r1,r4   FD.XMW|
+        assertEquals(3, sim_wx.getInsns());
+        assertEquals(9, sim_wx.getCycles());
+    }
+
+    @Test
+    public void test1WX2() {
+        List<Insn> insns = new LinkedList<>();
+        insns.add(makeInsn(3, 2, -1, MemoryOp.Load));
+        insns.add(makeInsn(3, 4, -1, MemoryOp.Store));
+        sim_wx.run(insns);
+        assertEquals(2, sim_wx.getInsns());
+        // 123456789
+        // fdxmw   |
+        //  fd.xmw|
+        assertEquals(8, sim_wx.getCycles());
+    }
+
+    // ------------------------------------------------------------
     // WM
     // ------------------------------------------------------------
     @Test
-    public void test1UopWM1() {
+    public void test1WM1() {
         List<Insn> insns = new LinkedList<>();
         insns.add(makeInsn(3, 2, -1, MemoryOp.Load));
         insns.add(makeInsn(4, 3, -1, MemoryOp.Store));
@@ -201,38 +277,38 @@ public class InorderPipelineSampleTest {
     }
 
     @Test
-    public void test1UopWM2() {
+    public void test1WM2() {
         List<Insn> insns = new LinkedList<>();
         insns.add(makeInsn(3, 2, -1, MemoryOp.Load));
         insns.add(makeInsn(3, 4, -1, MemoryOp.Store));
         sim_wm.run(insns);
         assertEquals(2, sim_wm.getInsns());
-        // 12345678
-        // fdxmw  |
-        //  fd.xmw|
-        assertEquals(8, sim_wm.getCycles());
+        // 123456789
+        // fdxmw   |
+        //  fd..xmw|
+        assertEquals(9, sim_wm.getCycles());
     }
 
     // ------------------------------------------------------------
     // MX
     // ------------------------------------------------------------
     @Test
-    public void test1UopWX2() {
+    public void test1MX2() {
         List<Insn> insns = new LinkedList<>();
         insns.add(makeInsn(3, 2, -1, MemoryOp.Load));
         insns.add(makeInsn(3, 4, -1, MemoryOp.Store));
-        sim_wm.run(insns);
-        assertEquals(2, sim_wm.getInsns());
-        // 1234567
-        // fdxmw |
-        //  fdxmw|
-        assertEquals(7, sim_wm.getCycles());
+        sim_mx.run(insns);
+        assertEquals(2, sim_mx.getInsns());
+        // 123456789
+        // fdxmw   |
+        //  fd..xmw|
+        assertEquals(9, sim_mx.getCycles());
     }
 
     // ------------------------------------------------------------
-    // WM and WX
+    // No MX
     // ------------------------------------------------------------
-    public void test1UopWMandWXWM() {
+    public void testNoMX() {
         List<Insn> insns = new LinkedList<>();
         insns.add(makeInsn(3, 2, -1, MemoryOp.Load));
         insns.add(makeInsn(4, 3, -1, MemoryOp.Store));
@@ -242,5 +318,26 @@ public class InorderPipelineSampleTest {
         // fdxmw  |
         //  fd.xmw|
         assertEquals(8, sim_wm_wx.getCycles());
+    }
+
+    // ------------------------------------------------------------
+    // No WM
+    // ------------------------------------------------------------
+    public void testNoWM() {
+        List<Insn> insns = new LinkedList<>();
+        insns.add(makeInsn(3, 2, -1, MemoryOp.Load));
+        insns.add(makeInsn(4, 3, -1, MemoryOp.Store));
+        sim_mx_wx.run(insns);
+    }
+
+
+    // ------------------------------------------------------------
+    // NO WX
+    // ------------------------------------------------------------
+    public void testNoWX1() {
+        List<Insn> insns = new LinkedList<>();
+        insns.add(makeInsn(3, 2, -1, MemoryOp.Load));
+        insns.add(makeInsn(4, 3, -1, MemoryOp.Store));
+        sim_mx_wm.run(insns);
     }
 }

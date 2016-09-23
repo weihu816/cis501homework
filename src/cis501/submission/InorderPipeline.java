@@ -70,6 +70,7 @@ public class InorderPipeline implements IInorderPipeline {
         while (insnIterator.hasNext() || !isEmpty()) {
             advance(insnIterator);
             cycleCounter++;
+            // print(cycleCounter);
         }
     }
 
@@ -148,13 +149,13 @@ public class InorderPipeline implements IInorderPipeline {
         else { clear(Stage.FETCH); }
     }
 
-    public void print() {
+    public void print(int i) {
         Insn wi = getInsn(Stage.WRITEBACK);
         Insn mi = getInsn(Stage.MEMORY);
         Insn xi = getInsn(Stage.EXECUTE);
         Insn di = getInsn(Stage.DECODE);
         Insn fi = getInsn(Stage.FETCH);
-        System.out.println("--------------------------------------------------");
+        System.out.println("-------------------------------------------------- " + i);
         System.out.println(wi == null ? "/" : wi.toString());
         System.out.println(mi == null ? "/" :mi.toString());
         System.out.println(xi == null ? "/" :xi.toString());
@@ -173,37 +174,67 @@ public class InorderPipeline implements IInorderPipeline {
         if (di == null) return false;
         if (stallOnLoadToUseDependence(di, xi)) return true;
 
-        // If di require from xi
-        if (xi != null && (di.srcReg1 == xi.dstReg || di.srcReg2 == xi.dstReg || di.dstReg == xi.dstReg)) {
-            if (xi.mem != null) { // Load/Store
+        if (xi != null) {
+            if (xi.mem != null) {
+                // X is Load/Store
                 if (di.mem != null) {
-                    if (di.srcReg1 == xi.dstReg)
-                        if (!bypasses.contains(Bypass.WM)) return true;
-                    if (di.dstReg == xi.dstReg)
-                        if (!bypasses.contains(Bypass.WX)) return true;
-                } else { // add
-                    if (!bypasses.contains(Bypass.WX)) return true;
-                }
-            } else { // ADD
-                if (di.mem != null) {
-                    if (di.mem == MemoryOp.Store && di.srcReg1 == xi.dstReg) {
-                        if (!bypasses.contains(Bypass.WM)) return true;
-                    } else if (di.mem == MemoryOp.Load && di.srcReg1 == xi.dstReg) {
-                        if (!bypasses.contains(Bypass.MX)) return true;
-                        if (!bypasses.contains(Bypass.WX)) return true;
+                    // D is Mem
+                    // Store => Load
+                    if (di.mem == MemoryOp.Store && xi.mem == MemoryOp.Load && di.dstReg == xi.dstReg) {
+                        return true;
                     }
                 } else {
-                    if (!bypasses.contains(Bypass.MX)) return true;
-                    if (!bypasses.contains(Bypass.WX)) return true;
+                    // D is ADD
+                    if (xi.mem == MemoryOp.Load) {
+                        // stallOnLoadToUseDependence special case
+                        // if (xi.dstReg == di.srcReg1 || xi.dstReg == di.srcReg2) return true;
+                    }
+                }
+            } else {
+                // X is ADD
+                if ((di.srcReg1 == xi.dstReg || di.srcReg2 == xi.dstReg)) {
+                    if (di.mem != null) {
+                        // D is Load/Store
+                        if (di.mem == MemoryOp.Store && di.srcReg1 == xi.dstReg) {
+                            if (!bypasses.contains(Bypass.WM)) return true;
+                        } else if (di.mem == MemoryOp.Load && di.srcReg1 == xi.dstReg) {
+                            if (!bypasses.contains(Bypass.MX)) return true;
+                            if (!bypasses.contains(Bypass.WX)) return true;
+                        }
+                    } else {
+                        // D is ADD
+                        if (!bypasses.contains(Bypass.MX)) return true;
+                    }
                 }
             }
         }
 
-        if (mi != null && (di.srcReg1 == mi.dstReg || di.srcReg2 == mi.dstReg)) {
-            if (mi.mem != null) { // Load/Store
-
+        if (mi != null) {
+            if (mi.mem != null) {
+                // X is Load/Store
+                if (di.mem != null) {
+                    // D is MEM
+                    // Store => Load
+                    if (di.mem == MemoryOp.Store && mi.mem == MemoryOp.Load && di.dstReg == mi.dstReg) {
+                        if (!bypasses.contains(Bypass.WX)) return true;
+                    }
+                } else {
+                    // D is ADD
+                    if (mi.mem == MemoryOp.Load) {
+                        // stallOnLoadToUseDependence special case
+                        // if (!bypasses.contains(Bypass.WX)) return true;
+                    }
+                }
             } else {
-
+                // X is ADD
+                if ((di.srcReg1 == mi.dstReg || di.srcReg2 == mi.dstReg)) {
+                    if (di.mem != null) {
+                        // D is Load/Store
+                    } else {
+                        // D is ADD
+                        if (!bypasses.contains(Bypass.WX)) return true;
+                    }
+                }
             }
         }
 
