@@ -196,20 +196,20 @@ public class BranchPredSampleTest {
 
     @Test
     public void testAlwaysTakenTrace() {
-        final IDirectionPredictor always = new DirPredAlwaysTaken_Solution();
-        final IBranchTargetBuffer bigBtb = new BranchTargetBuffer_Solution(10);
+        final IDirectionPredictor always = new DirPredAlwaysTaken();
+        final IBranchTargetBuffer bigBtb = new BranchTargetBuffer(10);
         InsnIterator uiter = new InsnIterator(TRACE_FILE, -1);
-        IInorderPipeline pl = new InorderPipeline_Solution(0, new BranchPredictor(always, bigBtb));
+        IInorderPipeline pl = new InorderPipeline(0, new BranchPredictor(always, bigBtb));
         pl.run(uiter);
         assertEquals(0.96, pl.getInsns() / (double) pl.getCycles(), 0.01);
     }
 
     @Test
     public void testNeverTakenTrace() {
-        final IDirectionPredictor never = new DirPredNeverTaken_Solution();
-        final IBranchTargetBuffer bigBtb = new BranchTargetBuffer_Solution(10);
+        final IDirectionPredictor never = new DirPredNeverTaken();
+        final IBranchTargetBuffer bigBtb = new BranchTargetBuffer(10);
         InsnIterator uiter = new InsnIterator(TRACE_FILE, -1);
-        IInorderPipeline pl = new InorderPipeline_Solution(0, new BranchPredictor(never, bigBtb));
+        IInorderPipeline pl = new InorderPipeline(0, new BranchPredictor(never, bigBtb));
         pl.run(uiter);
         assertEquals(0.81, pl.getInsns() / (double) pl.getCycles(), 0.01);
     }
