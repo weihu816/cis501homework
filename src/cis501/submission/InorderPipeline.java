@@ -15,9 +15,10 @@ enum Stage {
     WRITEBACK(4), MEMORY(3), EXECUTE(2), DECODE(1), FETCH(0);
 
     public static final int NUM_STAGES = 5;
+    private static Stage[] vals = values();
     private final int index;
 
-    private Stage(int idx) {
+    Stage(int idx) {
         this.index = idx;
     }
 
@@ -28,6 +29,11 @@ enum Stage {
 
     public boolean toLeave() {
         return index == NUM_STAGES - 1;
+    }
+
+    /** Returns the next stage in the pipeline, e.g., next after Fetch is Decode */
+    public Stage next() {
+        return vals[(this.ordinal() - 1 + vals.length) % vals.length];
     }
 }
 
@@ -58,6 +64,15 @@ public class InorderPipeline implements IInorderPipeline {
         this.bypasses = new HashSet<>(bypasses);
     }
 
+    /**
+     * Create a new pipeline with the additional memory latency and branch predictor. The pipeline
+     * should model full bypassing (MX, Wx, WM).
+     *
+     * @param additionalMemLatency see InorderPipeline(int, Set<Bypass>)
+     * @param bp                   the branch predictor to use
+     */
+    public InorderPipeline(int additionalMemLatency, BranchPredictor bp) {
+    }
     @Override
     public String[] groupMembers() {
         return new String[]{"Wei Hu", "Dongni Wang"};
