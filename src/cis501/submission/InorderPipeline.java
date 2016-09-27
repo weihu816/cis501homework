@@ -173,7 +173,6 @@ public class InorderPipeline implements IInorderPipeline {
 
     private boolean stallOnD(Insn di, Insn xi, Insn mi) {
         if (di == null) return false;
-        // if (di.branch != null || (xi != null && xi.branch != null)) return false;
         if (stallOnLoadToUseDependence(di, xi)) {
             return true;
         }
