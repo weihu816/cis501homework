@@ -5,6 +5,8 @@ import cis501.IDirectionPredictor;
 
 public class DirPredBimodal implements IDirectionPredictor {
 
+
+
     public DirPredBimodal(int indexBits) {
     }
 

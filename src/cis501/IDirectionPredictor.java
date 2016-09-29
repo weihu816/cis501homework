@@ -1,7 +1,6 @@
 package cis501;
 
 public interface IDirectionPredictor {
-
     /**
      * @param pc the program counter of the insn needing prediction
      * @return the predicted direction for the insn

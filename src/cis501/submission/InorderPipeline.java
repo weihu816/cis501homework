@@ -45,6 +45,7 @@ public class InorderPipeline implements IInorderPipeline {
     /* Pipeline Parameters */
     private int additionalMemLatency = 0, currentMemTimer = 0;
     private Set<Bypass> bypasses;
+    private BranchPredictor bp;
     /* Running Statics */
     private int insnCounter = 0;
     private int cycleCounter = 0;
@@ -72,7 +73,11 @@ public class InorderPipeline implements IInorderPipeline {
      * @param bp                   the branch predictor to use
      */
     public InorderPipeline(int additionalMemLatency, BranchPredictor bp) {
+        this.additionalMemLatency = additionalMemLatency;
+        this.bypasses = new HashSet<>(Bypass.FULL_BYPASS);
+        this.bp = bp;
     }
+
     @Override
     public String[] groupMembers() {
         return new String[]{"Wei Hu", "Dongni Wang"};
