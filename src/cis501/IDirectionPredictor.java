@@ -1,6 +1,8 @@
 package cis501;
 
 public interface IDirectionPredictor {
+    private int indexBits;
+
     /**
      * @param pc the program counter of the insn needing prediction
      * @return the predicted direction for the insn
@@ -13,4 +15,5 @@ public interface IDirectionPredictor {
      */
     public void train(long pc, Direction actual);
 
+    public long
 }

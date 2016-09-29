@@ -16,16 +16,18 @@ public class BranchTargetBuffer implements IBranchTargetBuffer {
 
     @Override
     public long predict(long pc) {
-        BTBEntry entry = bTBTable.get(pc);
+        BTBEntry entry = bTBTable.get(index(pc));
         if( entry!= null && entry.getTag() == pc) { return entry.getTarget(); }
         return 0;
     }
 
     @Override
     public void train(long pc, long actual) {
-        long index = pc & (1<<(indexBits+1)-1);
+        long index = index(pc);
         bTBTable.put(index, new BTBEntry(pc, actual));
     }
+
+    public long index(long pc) { return pc & (1<<(indexBits+1)-1);}
 
     /**
      * The BTBEntry inside the BTB table
