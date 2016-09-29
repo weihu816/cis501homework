@@ -31,15 +31,15 @@ public class BranchPredSampleTest {
         // Runs before each test...() method
         btb = new BranchTargetBuffer(3/*index bits*/);
         bimodal = new DirPredBimodal(3/*index bits*/);
-        gshare = new DirPredGshare(3/*index bits*/, 1/*history bits*/);
+        //gshare = new DirPredGshare(3/*index bits*/, 1/*history bits*/);
 
         // create a tournament predictor that behaves like bimodal
         IDirectionPredictor always = new DirPredAlwaysTaken();
         IDirectionPredictor never = new DirPredNeverTaken();
-        tournament = new DirPredTournament(3/*index bits*/, never, always);
+        //tournament = new DirPredTournament(3/*index bits*/, never, always);
 
         // pipeline uses never predictor
-        pipe = new InorderPipeline(0, new BranchPredictor(never, btb));
+        //pipe = new InorderPipeline(0, new BranchPredictor(never, btb));
     }
 
     @Test
