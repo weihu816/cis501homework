@@ -9,7 +9,10 @@ public class BranchTargetBuffer implements IBranchTargetBuffer {
     private Hashtable<Long, BTBEntry> bTBTable; // use a hashtable as BTBTable to avoid initializing empty entry
 
     public BranchTargetBuffer(int indexBits) {
-        if(indexBits > 63) System.out.print("BranchTargetBuffer: Invalid indexBits"); System.exit(1);
+        if(indexBits > 63) {
+            System.out.print("BranchTargetBuffer: Invalid indexBits");
+            System.exit(1);
+        }
         this.indexBits = indexBits;
         this.bTBTable = new Hashtable<>();
     }
@@ -23,11 +26,12 @@ public class BranchTargetBuffer implements IBranchTargetBuffer {
 
     @Override
     public void train(long pc, long actual) {
-        long index = index(pc);
-        bTBTable.put(index, new BTBEntry(pc, actual));
+        long indexed = index(pc);
+        System.out.format("indexed: %d%n", indexed);
+        bTBTable.put(indexed, new BTBEntry(pc, actual));
     }
 
-    public long index(long pc) { return pc & (1<<(indexBits+1)-1);}
+    public long index(long pc) { return pc & (1<<indexBits-1);}
 
     /**
      * The BTBEntry inside the BTB table
