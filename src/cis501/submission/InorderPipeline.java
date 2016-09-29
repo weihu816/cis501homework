@@ -49,6 +49,8 @@ public class InorderPipeline implements IInorderPipeline {
     private int insnCounter = 0;
     private int cycleCounter = 0;
 
+    private BranchPredictor branchPredictor;
+
     /**
      * Create a new pipeline with the given additional memory latency.
      *
@@ -72,6 +74,9 @@ public class InorderPipeline implements IInorderPipeline {
      * @param bp                   the branch predictor to use
      */
     public InorderPipeline(int additionalMemLatency, BranchPredictor bp) {
+        // TODO
+        this.additionalMemLatency = additionalMemLatency;
+        this.branchPredictor = bp;
     }
     @Override
     public String[] groupMembers() {
