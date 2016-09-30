@@ -47,7 +47,7 @@ public class InorderPipeline implements IInorderPipeline {
     private int additionalMemLatency = 0, currentMemTimer = 0;
     private Set<Bypass> bypasses;
     /* Branch Predictor Parameters */
-    private BranchPredictor bp;
+    private BranchPredictor branchPredictor;
     private Hashtable<Long, Insn> pcInsnRecorder; // allows jump-back loop-up
     /* Running Statics */
     private int insnCounter = 0;
@@ -73,12 +73,12 @@ public class InorderPipeline implements IInorderPipeline {
      * should model full bypassing (MX, Wx, WM).
      *
      * @param additionalMemLatency see InorderPipeline(int, Set<Bypass>)
-     * @param bp                   the branch predictor to use
+     * @param branchPredictor                   the branch predictor to use
      */
-    public InorderPipeline(int additionalMemLatency, BranchPredictor bp) {
+    public InorderPipeline(int additionalMemLatency, BranchPredictor branchPredictor) {
         this.additionalMemLatency = additionalMemLatency;
         this.bypasses = new HashSet<>(Bypass.FULL_BYPASS);
-        this.bp = bp;
+        this.branchPredictor = branchPredictor;
         this.pcInsnRecorder = new Hashtable<>();
     }
 
@@ -208,7 +208,7 @@ public class InorderPipeline implements IInorderPipeline {
             // waste a cycle: do not advance FETCH, only over-write (re-fetch)
             fetchInsn(getNextInsntoFetch(unbranchNextPC_D, iterator));
         } else { // went to the right place (no-branch) or unknown yet (branch)
-            long predictedPCtoFetch = bp.predict(lastFetchedInsn.pc, lastFetchedInsn.fallthroughPC());
+            long predictedPCtoFetch = branchPredictor.predict(lastFetchedInsn.pc, lastFetchedInsn.fallthroughPC());
             advance(Stage.FETCH);
             fetchInsn(getNextInsntoFetch(predictedPCtoFetch, iterator));
         }
