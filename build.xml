@@ -34,14 +34,14 @@
            classpathref="libClasspath"
            includeAntRuntime="false"
            debug="true" debuglevel="lines,vars,source"
-           source="1.8" target="1.8"/>
+           source="1.7" target="1.7"/>
 
     <!-- compile tests -->
     <javac srcdir="${test.dir}/" destdir="${classes.dir}"
            classpathref="libClasspath"
            includeAntRuntime="false"
            debug="true" debuglevel="lines,vars,source"
-           source="1.8" target="1.8"/>
+           source="1.7" target="1.7"/>
     
   </target>
 
