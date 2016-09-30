@@ -91,13 +91,13 @@ public class InorderPipeline implements IInorderPipeline {
     public void run(Iterable<Insn> ii) {
         Iterator<Insn> insnIterator = ii.iterator();
         // change the routine so that the first fetch is free: no prediction
-        cycleCounter++;
         if (insnIterator.hasNext()) {
             Insn tmp = insnIterator.next();
             fetchInsn(tmp);
             // add to the pcInsnRecorder
             pcInsnRecorder.put(tmp.pc, tmp);
         }
+        cycleCounter++;
         // end of change
         while (insnIterator.hasNext() || !isEmpty()) {
             advance(insnIterator);
@@ -167,10 +167,10 @@ public class InorderPipeline implements IInorderPipeline {
         /* ----------  EXECUTE  ---------- */
         if (getInsn(Stage.MEMORY) != null) { return; }
         // at the end of EXECUTE, check if the current insn is branch
-        long nextPC_E = -1; // if -1, no action; else, need to check the decode stage insn
+        long nextPC_E = 0; // if 0, no action; else, need to check the decode stage insn
         Insn insn_E = getInsn(Stage.EXECUTE);
-        if( insn_E!= null) { //  ececute has an insn
-            insnCounter++;
+        if( insn_E!= null) { //  EXECUTE stage has an insn
+            insnCounter++; // count after execute
             if(insn_E.branch == Direction.Taken) { // is a branch and is taken
                 nextPC_E = insn_E.branchTarget;
             } else { // is not a branch or is not taken
@@ -180,19 +180,18 @@ public class InorderPipeline implements IInorderPipeline {
         advance(Stage.EXECUTE);
 
         /* ----------   DECODE  ---------- */
-        // Stall on Load-To-Use Dependence
-        if (getInsn(Stage.EXECUTE) != null || stallOnD(di, xi, mi)) { return; }
-
+        // check the equality of decode stage insn and nextPC_E: branch prediction result check
         Insn insn_D = getInsn(Stage.DECODE);
-        // check the decode stage insn with nextPC_E
-        if (nextPC_E > 0 && (insn_D == null || nextPC_E != insn_D.pc))  { // if we made wrong branch
+        if (nextPC_E != 0 && (insn_D == null || nextPC_E != insn_D.pc))  { // if made wrong branch prediction
             //waste 2 cycles: do not advance DECODE/FETCH, only over-write FETCH (re-fetch) and clean DECODE
             clear(Stage.DECODE);
             fetchInsn(getNextInsntoFetch(nextPC_E, iterator));
             return;
         }
+        // Stall on Load-To-Use Dependence
+        if (getInsn(Stage.EXECUTE) != null || stallOnD(di, xi, mi)) { return; }
         // at the end of DECODE, check if the current insn is branch
-        long unbranchNextPC_D = -1;
+        long unbranchNextPC_D = 0;
         if ( insn_D!= null && insn_D.branch == null) {
             unbranchNextPC_D = insn_D.fallthroughPC();
         }
@@ -200,11 +199,10 @@ public class InorderPipeline implements IInorderPipeline {
 
         /* ----------   FETCH   ---------- */
         if (getInsn(Stage.DECODE) != null) { return; }
-        // branch prediction starting at second fetch (first handled already):
-        Insn lastFetchedInsn = getInsn(Stage.FETCH); //
-        //System.out.println(" DEBUG: FETCH" + lastFetchedInsn.pc);
+        // branch prediction
+        Insn lastFetchedInsn = getInsn(Stage.FETCH);
         if (lastFetchedInsn == null) { return;} // nothing in FETCH stage: no action
-        if (unbranchNextPC_D > 0 && lastFetchedInsn.pc != unbranchNextPC_D) { // should not branch but did branch
+        if (unbranchNextPC_D != 0 && lastFetchedInsn.pc != unbranchNextPC_D) { // should not branch but did branch
             // waste a cycle: do not advance FETCH, only over-write (re-fetch)
             fetchInsn(getNextInsntoFetch(unbranchNextPC_D, iterator));
         } else { // went to the right place (no-branch) or unknown yet (branch)
@@ -214,7 +212,7 @@ public class InorderPipeline implements IInorderPipeline {
         }
     }
 
-    public Insn getNextInsntoFetch(long nextPCtoFecth, Iterator<Insn> iterator) {
+    private Insn getNextInsntoFetch(long nextPCtoFecth, Iterator<Insn> iterator) {
         // check if it is a jump-back
         Insn nextInsntoFecth = pcInsnRecorder.get(nextPCtoFecth);
         // add jumped and next pc into recorder if not a jump-back branch
