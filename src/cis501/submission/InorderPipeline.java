@@ -14,13 +14,13 @@ import java.util.Set;
 enum Stage {
     WRITEBACK(4), MEMORY(3), EXECUTE(2), DECODE(1), FETCH(0);
 
-    public static final int NUM_STAGES = 5;
-    private static Stage[] vals = values();
-    private final int index;
+        public static final int NUM_STAGES = 5;
+        private static Stage[] vals = values();
+        private final int index;
 
-    Stage(int idx) {
-        this.index = idx;
-    }
+        Stage(int idx) {
+            this.index = idx;
+        }
 
     /** Returns the index of this stage within the pipeline */
     public int i() {
@@ -49,6 +49,8 @@ public class InorderPipeline implements IInorderPipeline {
     /* Running Statics */
     private int insnCounter = 0;
     private int cycleCounter = 0;
+
+    private BranchPredictor branchPredictor;
 
     /**
      * Create a new pipeline with the given additional memory latency.
