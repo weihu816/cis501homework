@@ -53,4 +53,11 @@ public class CounterTest {
         preC = preC.train(not);
         assertEquals(preC, PredDirection.t);
     }
+
+    @Test
+    public void bitManip() {
+        assertEquals(1^1, 0);
+        assertEquals(1^0, 1);
+        assertEquals(0^0, 0);
+    }
 }

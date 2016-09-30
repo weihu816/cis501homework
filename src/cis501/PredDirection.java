@@ -8,6 +8,7 @@ public enum PredDirection {
 
     private static PredDirection[] vals = values();
 
+    /** predict a Direction */
     public Direction predict() {
         return (this.ordinal() >> 1) == 1 ? Direction.Taken : Direction.NotTaken;
     }

@@ -5,33 +5,33 @@ import cis501.IBranchTargetBuffer;
 import java.util.Hashtable;
 
 public class BranchTargetBuffer implements IBranchTargetBuffer {
-    private int indexBits;
-    private Hashtable<Long, BTBEntry> bTBTable; // use a hashtable as BTBTable to avoid initializing empty entry
+    private int indexBitM;
+    private BTBEntry[] bTBTable; // use a hashtable as BTBTable to avoid initializing empty entry
 
     public BranchTargetBuffer(int indexBits) {
-        if(indexBits > 63) {
+        if(indexBits > 32) {
             System.out.print("BranchTargetBuffer: Invalid indexBits");
             System.exit(1);
         }
-        this.indexBits = indexBits;
-        this.bTBTable = new Hashtable<>();
+        this.indexBitM = (1<<indexBits-1);
+        this.bTBTable = new BTBEntry[1<<indexBits];
     }
 
     @Override
     public long predict(long pc) {
-        BTBEntry entry = bTBTable.get(index(pc));
+        BTBEntry entry = bTBTable[index(pc)];
         if( entry!= null && entry.getTag() == pc) { return entry.getTarget(); }
         return 0;
     }
 
     @Override
     public void train(long pc, long actual) {
-        long indexed = index(pc);
-        System.out.format("indexed: %d%n", indexed);
-        bTBTable.put(indexed, new BTBEntry(pc, actual));
+        int indexed = index(pc);
+        System.out.format("%d%n indexed: %d%n", pc, indexed);
+        bTBTable[indexed] = new BTBEntry(pc, actual);
     }
 
-    public long index(long pc) { return pc & (1<<indexBits-1);}
+    public int index(long pc) { return (int) pc&this.indexBitM;}
 
     /**
      * The BTBEntry inside the BTB table
