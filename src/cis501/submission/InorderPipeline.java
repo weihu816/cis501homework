@@ -127,6 +127,11 @@ public class InorderPipeline implements IInorderPipeline {
         latches[stage.i()] = null;
     }
 
+    private void flush() {
+        latches[Stage.DECODE.i()] = null;
+        latches[Stage.FETCH.i()] = null;
+    }
+
     private boolean isEmpty() {
         for (Insn insn : latches)
             if (insn != null) return false;
@@ -153,6 +158,7 @@ public class InorderPipeline implements IInorderPipeline {
         final Insn insn_M = getInsn(Stage.MEMORY);
         final Insn insn_X = getInsn(Stage.EXECUTE);
         final Insn insn_D = getInsn(Stage.DECODE);
+        final Insn insn_F = getInsn(Stage.FETCH);
 
         /* ---------- WRITEBACK ---------- */
         advance(Stage.WRITEBACK);
@@ -187,17 +193,17 @@ public class InorderPipeline implements IInorderPipeline {
         if (getInsn(Stage.EXECUTE) != null || stallOnD(insn_D, insn_X, insn_M)) { return; }
         /* ------------------------------- */
         // check the decode stage insn with nextPC_E
-        if (nextPC_X != 0 && (insn_D == null || nextPC_X != insn_D.pc))  { // if we made wrong branch
+        if (nextPC_X != 0 && (insn_D == null || nextPC_X != insn_D.pc))  { // if we made wrong branch, flush the pipeline
             // waste 2 cycles: do not advance DECODE/FETCH, only over-write FETCH (re-fetch) and clean DECODE
-            clear(Stage.DECODE);
+            flush();
             fetchInsn(getNextInsntoFetch(nextPC_X, iterator));
             return;
         }
-        // Stall on Load-To-Use Dependence
+        // Stall on Load-To-Use Dependence TODO: order of stall and flush
         if (getInsn(Stage.EXECUTE) != null || stallOnD(insn_D, insn_X, insn_M)) { return; }
         // at the end of DECODE, check if the current insn is branch
         long unbranchNextPC_D = 0;
-        if ( insn_D!= null && insn_D.branch == null) {
+        if (insn_D!= null && insn_D.branch == null) { // insn_D is not a branch
             unbranchNextPC_D = insn_D.fallthroughPC();
         }
         /* ------------------------------- */
@@ -207,14 +213,13 @@ public class InorderPipeline implements IInorderPipeline {
         /* ----------   FETCH   ---------- */
         if (getInsn(Stage.DECODE) != null) { return; }
         /* ------------------------------- */
-        Insn lastFetchedInsn = getInsn(Stage.FETCH); //
-        if (lastFetchedInsn == null) { return;} // nothing in FETCH stage: no action
-        if (unbranchNextPC_D != 0 && lastFetchedInsn.pc != unbranchNextPC_D) { // should not branch but did branch
+        if (insn_F == null) { return; } // nothing in FETCH stage: no action
+        if (unbranchNextPC_D != 0 && insn_F.pc != unbranchNextPC_D) { // should not branch but did branch
             // waste a cycle: do not advance FETCH, only over-write (re-fetch)
             fetchInsn(getNextInsntoFetch(unbranchNextPC_D, iterator));
         } else { // went to the right place (no-branch) or unknown yet (branch)
-            long predictedPCtoFetch = branchPredictor.predict(lastFetchedInsn.pc, lastFetchedInsn.fallthroughPC());
             advance(Stage.FETCH);
+            long predictedPCtoFetch = branchPredictor.predict(insn_F.pc, insn_F.fallthroughPC());
             fetchInsn(getNextInsntoFetch(predictedPCtoFetch, iterator));
         }
     }

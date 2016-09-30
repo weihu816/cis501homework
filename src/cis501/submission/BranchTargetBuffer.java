@@ -48,5 +48,5 @@ public class BranchTargetBuffer implements IBranchTargetBuffer {
 
         public long getTag() { return tag;}
         public long getTarget() { return target; }
-}
+    }
 }
