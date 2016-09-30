@@ -48,7 +48,7 @@ public class InorderPipeline implements IInorderPipeline {
     private Set<Bypass> bypasses;
     /* Branch Predictor Parameters */
     private BranchPredictor branchPredictor;
-    private Hashtable<Long, Insn> pcInsnRecorder; // allows jump-back loop-up
+    private Hashtable<Long, Insn> pcInsnRecorder = new Hashtable<>(); // allows jump-back loop-up
     /* Running Statics */
     private int insnCounter = 0;
     private int cycleCounter = 0;
@@ -79,7 +79,6 @@ public class InorderPipeline implements IInorderPipeline {
         this.additionalMemLatency = additionalMemLatency;
         this.bypasses = new HashSet<>(Bypass.FULL_BYPASS);
         this.branchPredictor = branchPredictor;
-        this.pcInsnRecorder = new Hashtable<>();
     }
 
     @Override
@@ -120,15 +119,15 @@ public class InorderPipeline implements IInorderPipeline {
     // ----------------------------------------------------------------------
     // Pipeline Stage Latches Operations
     // ----------------------------------------------------------------------
-    public Insn getInsn(Stage stage) {
+    private Insn getInsn(Stage stage) {
         return latches[stage.i()];
     }
 
-    public void clear(Stage stage) {
+    private void clear(Stage stage) {
         latches[stage.i()] = null;
     }
 
-    public boolean isEmpty() {
+    private boolean isEmpty() {
         for (Insn insn : latches)
             if (insn != null) return false;
         return true;
@@ -149,46 +148,49 @@ public class InorderPipeline implements IInorderPipeline {
      * Pipeline Logic
      * @param iterator
      */
-    public void advance(Iterator<Insn> iterator) {
+    private void advance(Iterator<Insn> iterator) {
         // Current stages snapshot
-        final Insn mi = getInsn(Stage.MEMORY);
-        final Insn xi = getInsn(Stage.EXECUTE);
-        final Insn di = getInsn(Stage.DECODE);
+        final Insn insn_M = getInsn(Stage.MEMORY);
+        final Insn insn_X = getInsn(Stage.EXECUTE);
+        final Insn insn_D = getInsn(Stage.DECODE);
 
         /* ---------- WRITEBACK ---------- */
         advance(Stage.WRITEBACK);
 
+
         /* ----------  MEMORY   ---------- */
-        if (!checkMemDelay(mi)) { return; }
+        if (!checkMemDelay(insn_M)) { return; }
         if (getInsn(Stage.WRITEBACK) != null) { return; }
-        advance(Stage.MEMORY);
         currentMemTimer = 0;
+        /* ------------------------------- */
+        advance(Stage.MEMORY);
+
 
         /* ----------  EXECUTE  ---------- */
         if (getInsn(Stage.MEMORY) != null) { return; }
+        /* ------------------------------- */
         // at the end of EXECUTE, check if the current insn is branch
-        long nextPC_E = -1; // if -1, no action; else, need to check the decode stage insn
-        Insn insn_E = getInsn(Stage.EXECUTE);
-        if( insn_E!= null) { //  ececute has an insn
+        long nextPC_X = -1; // if -1, no action; else, need to check the decode stage insn TODO: check -1
+        if (insn_X != null) { //  ececute has an insn
             insnCounter++;
-            if(insn_E.branch == Direction.Taken) { // is a branch and is taken
-                nextPC_E = insn_E.branchTarget;
+            if(insn_X.branch == Direction.Taken) { // is a branch and is taken
+                nextPC_X = insn_X.branchTarget;
             } else { // is not a branch or is not taken
-                nextPC_E = insn_E.fallthroughPC();
+                nextPC_X = insn_X.fallthroughPC();
             }
         }
+        /* ------------------------------- */
         advance(Stage.EXECUTE);
 
-        /* ----------   DECODE  ---------- */
-        // Stall on Load-To-Use Dependence
-        if (getInsn(Stage.EXECUTE) != null || stallOnD(di, xi, mi)) { return; }
 
-        Insn insn_D = getInsn(Stage.DECODE);
+        /* ----------   DECODE  ---------- */
+        if (getInsn(Stage.EXECUTE) != null || stallOnD(insn_D, insn_X, insn_M)) { return; }
+        /* ------------------------------- */
         // check the decode stage insn with nextPC_E
-        if (nextPC_E > 0 && (insn_D == null || nextPC_E != insn_D.pc))  { // if we made wrong branch
-            //waste 2 cycles: do not advance DECODE/FETCH, only over-write FETCH (re-fetch) and clean DECODE
+        if (nextPC_X > 0 && (insn_D == null || nextPC_X != insn_D.pc))  { // if we made wrong branch
+            // waste 2 cycles: do not advance DECODE/FETCH, only over-write FETCH (re-fetch) and clean DECODE
             clear(Stage.DECODE);
-            fetchInsn(getNextInsntoFetch(nextPC_E, iterator));
+            fetchInsn(getNextInsntoFetch(nextPC_X, iterator));
             return;
         }
         // at the end of DECODE, check if the current insn is branch
@@ -196,10 +198,13 @@ public class InorderPipeline implements IInorderPipeline {
         if ( insn_D!= null && insn_D.branch == null) {
             unbranchNextPC_D = insn_D.fallthroughPC();
         }
+        /* ------------------------------- */
         advance(Stage.DECODE);
+
 
         /* ----------   FETCH   ---------- */
         if (getInsn(Stage.DECODE) != null) { return; }
+        /* ------------------------------- */
         // branch prediction starting at second fetch (first handled already):
         Insn lastFetchedInsn = getInsn(Stage.FETCH); //
         //System.out.println(" DEBUG: FETCH" + lastFetchedInsn.pc);
@@ -214,7 +219,7 @@ public class InorderPipeline implements IInorderPipeline {
         }
     }
 
-    public Insn getNextInsntoFetch(long nextPCtoFecth, Iterator<Insn> iterator) {
+    private Insn getNextInsntoFetch(long nextPCtoFecth, Iterator<Insn> iterator) {
         // check if it is a jump-back
         Insn nextInsntoFecth = pcInsnRecorder.get(nextPCtoFecth);
         // add jumped and next pc into recorder if not a jump-back branch
