@@ -4,6 +4,8 @@ import cis501.Direction;
 import cis501.IDirectionPredictor;
 import cis501.PredDirection;
 
+import java.util.Arrays;
+
 
 public class DirPredBimodal implements IDirectionPredictor {
     private int indexBitM;
@@ -12,12 +14,13 @@ public class DirPredBimodal implements IDirectionPredictor {
     public DirPredBimodal(int indexBits) {
         this.indexBitM =  (1<<indexBits-1);
         this.predCountTable = new PredDirection[1<<indexBits];
+        // initialize the predictor to strongly not taken
+        Arrays.fill(this.predCountTable, PredDirection.N);
     }
 
     @Override
     public Direction predict(long pc) {
         PredDirection predicted = predCountTable[index(pc)];
-        if(predicted == null) return Direction.NotTaken;
         return predicted.predict();
     }
 
@@ -25,10 +28,8 @@ public class DirPredBimodal implements IDirectionPredictor {
     public void train(long pc, Direction actual) {
         int indexed = index(pc);
         PredDirection predReg = predCountTable[indexed];
-        if(predReg == null) predReg = PredDirection.N;
-        predReg = predReg.train(actual);
-        predCountTable[indexed] = predReg;
+        predCountTable[indexed] = predReg.train(actual);
     }
 
-    public int index(long pc) { return (int) pc&indexBitM;}
+    public int index(long pc) { return (int) pc & indexBitM;}
 }
