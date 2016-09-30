@@ -15,11 +15,9 @@ public class DirPredTournament extends DirPredBimodal {
 
     @Override
     public Direction predict(long pc) {
-        Direction predictedNT = this.predictorNT.predict(pc);
-        Direction predictedT = this.predictorT.predict(pc);
         Direction predictorChoosed = super.predict(pc);
-        if(predictorChoosed == Direction.Taken) return predictedT;
-        return predictedNT;
+        if(predictorChoosed == Direction.Taken) return this.predictorT.predict(pc);
+        return this.predictorNT.predict(pc);
     }
 
     @Override

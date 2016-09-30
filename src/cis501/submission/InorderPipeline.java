@@ -4,6 +4,7 @@ package cis501.submission;
 import cis501.*;
 
 import java.util.HashSet;
+import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -45,12 +46,12 @@ public class InorderPipeline implements IInorderPipeline {
     /* Pipeline Parameters */
     private int additionalMemLatency = 0, currentMemTimer = 0;
     private Set<Bypass> bypasses;
+    /* Branch Predictor Parameters */
     private BranchPredictor bp;
+    private Hashtable<Long, Insn> pcInsnRecorder; // allows jump-back loop-up
     /* Running Statics */
     private int insnCounter = 0;
     private int cycleCounter = 0;
-
-    private BranchPredictor branchPredictor;
 
     /**
      * Create a new pipeline with the given additional memory latency.
@@ -78,6 +79,7 @@ public class InorderPipeline implements IInorderPipeline {
         this.additionalMemLatency = additionalMemLatency;
         this.bypasses = new HashSet<>(Bypass.FULL_BYPASS);
         this.bp = bp;
+        this.pcInsnRecorder = new Hashtable<>();
     }
 
     @Override
@@ -88,6 +90,15 @@ public class InorderPipeline implements IInorderPipeline {
     @Override
     public void run(Iterable<Insn> ii) {
         Iterator<Insn> insnIterator = ii.iterator();
+        // change the routine so that the first fetch is free: no prediction
+        cycleCounter++;
+        if (insnIterator.hasNext()) {
+            Insn tmp = insnIterator.next();
+            fetchInsn(tmp);
+            // add to the pcInsnRecorder
+            pcInsnRecorder.put(tmp.pc, tmp);
+        }
+        // end of change
         while (insnIterator.hasNext() || !isEmpty()) {
             advance(insnIterator);
             cycleCounter++;
@@ -132,7 +143,6 @@ public class InorderPipeline implements IInorderPipeline {
 
     private void fetchInsn(Insn insn) {
         latches[Stage.FETCH.i()] = insn;
-        insnCounter++;
     }
 
     /**
@@ -156,20 +166,66 @@ public class InorderPipeline implements IInorderPipeline {
 
         /* ----------  EXECUTE  ---------- */
         if (getInsn(Stage.MEMORY) != null) { return; }
+        // at the end of EXECUTE, check if the current insn is branch
+        long nextPC_E = -1; // if -1, no action; else, need to check the decode stage insn
+        Insn insn_E = getInsn(Stage.EXECUTE);
+        if( insn_E!= null) { //  ececute has an insn
+            insnCounter++;
+            if(insn_E.branch == Direction.Taken) { // is a branch and is taken
+                nextPC_E = insn_E.branchTarget;
+            } else { // is not a branch or is not taken
+                nextPC_E = insn_E.fallthroughPC();
+            }
+        }
         advance(Stage.EXECUTE);
 
         /* ----------   DECODE  ---------- */
         // Stall on Load-To-Use Dependence
         if (getInsn(Stage.EXECUTE) != null || stallOnD(di, xi, mi)) { return; }
+
+        Insn insn_D = getInsn(Stage.DECODE);
+        // check the decode stage insn with nextPC_E
+        if (nextPC_E > 0 && (insn_D == null || nextPC_E != insn_D.pc))  { // if we made wrong branch
+            //waste 2 cycles: do not advance DECODE/FETCH, only over-write FETCH (re-fetch) and clean DECODE
+            clear(Stage.DECODE);
+            fetchInsn(getNextInsntoFetch(nextPC_E, iterator));
+            return;
+        }
+        // at the end of DECODE, check if the current insn is branch
+        long unbranchNextPC_D = -1;
+        if ( insn_D!= null && insn_D.branch == null) {
+            unbranchNextPC_D = insn_D.fallthroughPC();
+        }
         advance(Stage.DECODE);
 
         /* ----------   FETCH   ---------- */
         if (getInsn(Stage.DECODE) != null) { return; }
-        advance(Stage.FETCH);
-        if (iterator.hasNext()) {
-            Insn tmp = iterator.next();
-            fetchInsn(tmp);
+        // branch prediction starting at second fetch (first handled already):
+        Insn lastFetchedInsn = getInsn(Stage.FETCH); //
+        //System.out.println(" DEBUG: FETCH" + lastFetchedInsn.pc);
+        if (lastFetchedInsn == null) { return;} // nothing in FETCH stage: no action
+        if (unbranchNextPC_D > 0 && lastFetchedInsn.pc != unbranchNextPC_D) { // should not branch but did branch
+            // waste a cycle: do not advance FETCH, only over-write (re-fetch)
+            fetchInsn(getNextInsntoFetch(unbranchNextPC_D, iterator));
+        } else { // went to the right place (no-branch) or unknown yet (branch)
+            long predictedPCtoFetch = bp.predict(lastFetchedInsn.pc, lastFetchedInsn.fallthroughPC());
+            advance(Stage.FETCH);
+            fetchInsn(getNextInsntoFetch(predictedPCtoFetch, iterator));
         }
+    }
+
+    public Insn getNextInsntoFetch(long nextPCtoFecth, Iterator<Insn> iterator) {
+        // check if it is a jump-back
+        Insn nextInsntoFecth = pcInsnRecorder.get(nextPCtoFecth);
+        // add jumped and next pc into recorder if not a jump-back branch
+        while (nextInsntoFecth == null && iterator.hasNext()) {
+            Insn tmp = iterator.next();
+            pcInsnRecorder.put(tmp.pc, tmp);
+            if (tmp.pc == nextPCtoFecth) {
+                nextInsntoFecth = tmp;
+            }
+        }
+        return nextInsntoFecth;
     }
 
     public void print(int i) {
