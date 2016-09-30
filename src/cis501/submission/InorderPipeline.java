@@ -90,13 +90,13 @@ public class InorderPipeline implements IInorderPipeline {
     public void run(Iterable<Insn> ii) {
         Iterator<Insn> insnIterator = ii.iterator();
         // change the routine so that the first fetch is free: no prediction
-        cycleCounter++;
         if (insnIterator.hasNext()) {
             Insn tmp = insnIterator.next();
             fetchInsn(tmp);
             // add to the pcInsnRecorder
             pcInsnRecorder.put(tmp.pc, tmp);
         }
+        cycleCounter++;
         // end of change
         while (insnIterator.hasNext() || !isEmpty()) {
             advance(insnIterator);
@@ -170,7 +170,7 @@ public class InorderPipeline implements IInorderPipeline {
         if (getInsn(Stage.MEMORY) != null) { return; }
         /* ------------------------------- */
         // at the end of EXECUTE, check if the current insn is branch
-        long nextPC_X = -1; // if -1, no action; else, need to check the decode stage insn TODO: check -1
+        long nextPC_X = 0; // if -1, no action; else, need to check the decode stage insn
         if (insn_X != null) { //  ececute has an insn
             insnCounter++;
             if(insn_X.branch == Direction.Taken) { // is a branch and is taken
@@ -187,14 +187,16 @@ public class InorderPipeline implements IInorderPipeline {
         if (getInsn(Stage.EXECUTE) != null || stallOnD(insn_D, insn_X, insn_M)) { return; }
         /* ------------------------------- */
         // check the decode stage insn with nextPC_E
-        if (nextPC_X > 0 && (insn_D == null || nextPC_X != insn_D.pc))  { // if we made wrong branch
+        if (nextPC_X != 0 && (insn_D == null || nextPC_X != insn_D.pc))  { // if we made wrong branch
             // waste 2 cycles: do not advance DECODE/FETCH, only over-write FETCH (re-fetch) and clean DECODE
             clear(Stage.DECODE);
             fetchInsn(getNextInsntoFetch(nextPC_X, iterator));
             return;
         }
+        // Stall on Load-To-Use Dependence
+        if (getInsn(Stage.EXECUTE) != null || stallOnD(insn_D, insn_X, insn_M)) { return; }
         // at the end of DECODE, check if the current insn is branch
-        long unbranchNextPC_D = -1;
+        long unbranchNextPC_D = 0;
         if ( insn_D!= null && insn_D.branch == null) {
             unbranchNextPC_D = insn_D.fallthroughPC();
         }
@@ -205,11 +207,9 @@ public class InorderPipeline implements IInorderPipeline {
         /* ----------   FETCH   ---------- */
         if (getInsn(Stage.DECODE) != null) { return; }
         /* ------------------------------- */
-        // branch prediction starting at second fetch (first handled already):
         Insn lastFetchedInsn = getInsn(Stage.FETCH); //
-        //System.out.println(" DEBUG: FETCH" + lastFetchedInsn.pc);
         if (lastFetchedInsn == null) { return;} // nothing in FETCH stage: no action
-        if (unbranchNextPC_D > 0 && lastFetchedInsn.pc != unbranchNextPC_D) { // should not branch but did branch
+        if (unbranchNextPC_D != 0 && lastFetchedInsn.pc != unbranchNextPC_D) { // should not branch but did branch
             // waste a cycle: do not advance FETCH, only over-write (re-fetch)
             fetchInsn(getNextInsntoFetch(unbranchNextPC_D, iterator));
         } else { // went to the right place (no-branch) or unknown yet (branch)
