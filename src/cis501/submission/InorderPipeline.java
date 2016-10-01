@@ -101,7 +101,6 @@ public class InorderPipeline implements IInorderPipeline {
             advance(insnIterator);
             cycleCounter++;
             // print(cycleCounter);
-            if (cycleCounter > 200) break;
         }
     }
 
@@ -171,20 +170,22 @@ public class InorderPipeline implements IInorderPipeline {
 
 
         /* ----------  MEMORY   ---------- */
-        if (!checkMemDelay(insn_M)) { return; }
-        if (getInsn(Stage.WRITEBACK) != null) { return; }
-        currentMemTimer = 0;
-        /* ------------------------------- */
-        if (insn_M != null) timingTrace.get(insn_M).append(" " + cycleCounter);
-        advance(Stage.MEMORY);
+        boolean memDelay = checkMemDelay(insn_M);
+        if (memDelay) {
+            if (getInsn(Stage.WRITEBACK) != null) { return; }
+            currentMemTimer = 0;
+            /* ------------------------------- */
+            if (insn_M != null) timingTrace.get(insn_M).append(" " + cycleCounter);
+            advance(Stage.MEMORY);
+        }
+
 
 
         /* ----------  EXECUTE  ---------- */
         if (getInsn(Stage.MEMORY) != null) { return; }
         /* ------------------------------- */
-        // at the end of EXECUTE, check if the current insn is branch
-        long nextPC_X = 0; // if 0, no action; else, need to check the decode stage insn
-        if (insn_X != null) { //  ececute has an insn
+        long nextPC_X = 0;
+        if (insn_X != null) {
             insnCounter++;
             if(insn_X.branch == Direction.Taken) { // is a branch and is taken
                 nextPC_X = insn_X.branchTarget;
@@ -196,7 +197,7 @@ public class InorderPipeline implements IInorderPipeline {
         }
         /* ------------------------------- */
         if (insn_X != null) timingTrace.get(insn_X).append(" " + cycleCounter);
-        advance(Stage.EXECUTE);
+        if (!memDelay) advance(Stage.EXECUTE);
 
 
         /* ----------   DECODE  ---------- */
