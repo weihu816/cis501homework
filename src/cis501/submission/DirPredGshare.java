@@ -8,18 +8,18 @@ public class DirPredGshare extends DirPredBimodal {
 
     public DirPredGshare(int indexBits, int historyBits) {
         super(indexBits);
-        this.historyLimitMng = 1<<historyBits-1;
+        this.historyLimitMng = 1 << historyBits - 1;
     }
 
     @Override
     public Direction predict(long pc) {
-        return super.predict(pc^this.historyRegister);
+        return super.predict(pc ^ this.historyRegister);
     }
 
     @Override
     public void train(long pc, Direction actual) {
         updateHistory(actual);
-        super.train(pc^this.historyRegister, actual);
+        super.train(pc ^ this.historyRegister, actual);
     }
 
     public void updateHistory(Direction actual) {

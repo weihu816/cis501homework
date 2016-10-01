@@ -3,10 +3,7 @@ package cis501.submission;
 
 import cis501.*;
 
-import java.util.HashSet;
-import java.util.Hashtable;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Note: Stages are declared in "reverse" order to simplify iterating over them in reverse order,
@@ -52,6 +49,7 @@ public class InorderPipeline implements IInorderPipeline {
     /* Running Statics */
     private int insnCounter = 0;
     private int cycleCounter = 0;
+    private Map<Insn, StringBuilder> timingTrace = new HashMap<>();
 
     /**
      * Create a new pipeline with the given additional memory latency.
@@ -95,6 +93,7 @@ public class InorderPipeline implements IInorderPipeline {
             fetchInsn(tmp);
             // add to the pcInsnRecorder
             pcInsnRecorder.put(tmp.pc, tmp);
+            // print(cycleCounter);
         }
         cycleCounter++;
         // end of change
@@ -103,7 +102,6 @@ public class InorderPipeline implements IInorderPipeline {
             cycleCounter++;
             // print(cycleCounter);
         }
-        // System.out.println(count +  " !!!");
     }
 
     @Override
@@ -128,6 +126,8 @@ public class InorderPipeline implements IInorderPipeline {
     }
 
     private void flush() {
+        timingTrace.remove(latches[Stage.DECODE.i()]);
+        timingTrace.remove(latches[Stage.FETCH.i()]);
         latches[Stage.DECODE.i()] = null;
         latches[Stage.FETCH.i()] = null;
     }
@@ -146,6 +146,7 @@ public class InorderPipeline implements IInorderPipeline {
     }
 
     private void fetchInsn(Insn insn) {
+        timingTrace.put(insn, new StringBuilder(String.valueOf(cycleCounter)));
         latches[Stage.FETCH.i()] = insn;
     }
 
@@ -155,12 +156,17 @@ public class InorderPipeline implements IInorderPipeline {
      */
     private void advance(Iterator<Insn> iterator) {
         // Current stages snapshot
+        final Insn insn_W = getInsn(Stage.WRITEBACK);
         final Insn insn_M = getInsn(Stage.MEMORY);
         final Insn insn_X = getInsn(Stage.EXECUTE);
         final Insn insn_D = getInsn(Stage.DECODE);
         final Insn insn_F = getInsn(Stage.FETCH);
 
         /* ---------- WRITEBACK ---------- */
+        if (insn_W != null) {
+            System.out.println(timingTrace.get(insn_W).toString() + " " + insn_W.asm);
+            timingTrace.remove(insn_W);
+        }
         advance(Stage.WRITEBACK);
 
 
@@ -169,6 +175,7 @@ public class InorderPipeline implements IInorderPipeline {
         if (getInsn(Stage.WRITEBACK) != null) { return; }
         currentMemTimer = 0;
         /* ------------------------------- */
+        if (insn_M != null) timingTrace.get(insn_M).append(" " + cycleCounter);
         advance(Stage.MEMORY);
 
 
@@ -176,7 +183,7 @@ public class InorderPipeline implements IInorderPipeline {
         if (getInsn(Stage.MEMORY) != null) { return; }
         /* ------------------------------- */
         // at the end of EXECUTE, check if the current insn is branch
-        long nextPC_X = 0; // if -1, no action; else, need to check the decode stage insn
+        long nextPC_X = 0; // if 0, no action; else, need to check the decode stage insn
         if (insn_X != null) { //  ececute has an insn
             insnCounter++;
             if(insn_X.branch == Direction.Taken) { // is a branch and is taken
@@ -186,42 +193,39 @@ public class InorderPipeline implements IInorderPipeline {
             }
         }
         /* ------------------------------- */
+        if (insn_X != null) timingTrace.get(insn_X).append(" " + cycleCounter);
         advance(Stage.EXECUTE);
 
 
         /* ----------   DECODE  ---------- */
-        if (getInsn(Stage.EXECUTE) != null || stallOnD(insn_D, insn_X, insn_M)) { return; }
+        if (getInsn(Stage.EXECUTE) != null) { return; }
         /* ------------------------------- */
-        // check the decode stage insn with nextPC_E
-        if (nextPC_X != 0 && (insn_D == null || nextPC_X != insn_D.pc))  { // if we made wrong branch, flush the pipeline
+        // check the decode stage insn with nextPC_E TODO: insn_D == null || nextPC_X != insn_D.pc
+=        if (nextPC_X != 0 && (insn_D == null || nextPC_X != insn_D.pc)) { // if we made wrong branch, flush the pipeline
+            if (insn_X != null) timingTrace.get(insn_X).append(" " + "{mispred}");
             // waste 2 cycles: do not advance DECODE/FETCH, only over-write FETCH (re-fetch) and clean DECODE
             flush();
+            /* FETCH */
             fetchInsn(getNextInsntoFetch(nextPC_X, iterator));
             return;
         }
         // Stall on Load-To-Use Dependence TODO: order of stall and flush
-        if (getInsn(Stage.EXECUTE) != null || stallOnD(insn_D, insn_X, insn_M)) { return; }
-        // at the end of DECODE, check if the current insn is branch
-        long unbranchNextPC_D = 0;
-        if (insn_D!= null && insn_D.branch == null) { // insn_D is not a branch
-            unbranchNextPC_D = insn_D.fallthroughPC();
-        }
+        if (stallOnD(insn_D, insn_X, insn_M)) { return; }
         /* ------------------------------- */
+        if (insn_D != null) timingTrace.get(insn_D).append(" " + cycleCounter);
         advance(Stage.DECODE);
 
 
         /* ----------   FETCH   ---------- */
         if (getInsn(Stage.DECODE) != null) { return; }
         /* ------------------------------- */
-        if (insn_F == null) { return; } // nothing in FETCH stage: no action
-        if (unbranchNextPC_D != 0 && insn_F.pc != unbranchNextPC_D) { // should not branch but did branch
-            // waste a cycle: do not advance FETCH, only over-write (re-fetch)
-            fetchInsn(getNextInsntoFetch(unbranchNextPC_D, iterator));
-        } else { // went to the right place (no-branch) or unknown yet (branch)
-            advance(Stage.FETCH);
-            long predictedPCtoFetch = branchPredictor.predict(insn_F.pc, insn_F.fallthroughPC());
-            fetchInsn(getNextInsntoFetch(predictedPCtoFetch, iterator));
-        }
+        if (insn_F == null) { return; } // TODO: nothing in FETCH stage (not due to flushed): no action
+        if (insn_F != null) timingTrace.get(insn_F).append(" " + cycleCounter);
+        advance(Stage.FETCH);
+        long predictedPCtoFetch = branchPredictor.predict(insn_F.pc, insn_F.fallthroughPC());
+            /* FETCH */
+        System.out.println(insn_F.fallthroughPC() + " " + predictedPCtoFetch + " " + insn_F.pc);
+        fetchInsn(getNextInsntoFetch(predictedPCtoFetch, iterator));
     }
 
     private Insn getNextInsntoFetch(long nextPCtoFecth, Iterator<Insn> iterator) {

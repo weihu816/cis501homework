@@ -5,6 +5,7 @@ import cis501.IBranchTargetBuffer;
 import java.util.Hashtable;
 
 public class BranchTargetBuffer implements IBranchTargetBuffer {
+
     private int indexBitM;
     private BTBEntry[] bTBTable; // use a hashtable as BTBTable to avoid initializing empty entry
 
@@ -13,14 +14,18 @@ public class BranchTargetBuffer implements IBranchTargetBuffer {
             System.out.print("BranchTargetBuffer: Invalid indexBits");
             System.exit(1);
         }
-        this.indexBitM = (1<<indexBits-1);
+        this.indexBitM = (1 << indexBits - 1);
         this.bTBTable = new BTBEntry[1<<indexBits];
+        // All BTB entries are initialized with zero for their tag and target value
+        for (int i = 0; i < bTBTable.length; i++) {
+            bTBTable[i] = new BTBEntry();
+        }
     }
 
     @Override
     public long predict(long pc) {
         BTBEntry entry = bTBTable[index(pc)];
-        if( entry!= null && entry.getTag() == pc) { return entry.getTarget(); }
+        if(entry.getTag() == pc) { return entry.getTarget(); }
         return 0;
     }
 
@@ -31,7 +36,9 @@ public class BranchTargetBuffer implements IBranchTargetBuffer {
         bTBTable[indexed] = new BTBEntry(pc, actual);
     }
 
-    public int index(long pc) { return (int) pc&this.indexBitM;}
+    public int index(long pc) {
+        return (int) pc & this.indexBitM;
+    }
 
     /**
      * The BTBEntry inside the BTB table
@@ -40,6 +47,11 @@ public class BranchTargetBuffer implements IBranchTargetBuffer {
         // initialized with "empty" BTB entry: zero for their tag and target value
         long tag;
         long target;
+
+        BTBEntry() {
+            this.tag = 0;
+            this.target = 0;
+        }
 
         BTBEntry(long tag, long target) {
             this.tag = tag;
