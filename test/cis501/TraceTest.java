@@ -27,8 +27,12 @@ public class TraceTest {
             Insn tmp = uiter.next();
             Insn old = pcInsnRecorder.put(tmp.pc, tmp);
             if (old != null && old.branch != null) {
-                print("new: " + tmp.branch + " " + tmp.branchTarget);
-                print("old: " + old.branch + " " + old.branchTarget);
+                //print("new: " + tmp.branch + " " + tmp.branchTarget);
+                //print("old: " + old.branch + " " + old.branchTarget);
+                if (tmp.branch != old.branch) {
+                    print("old: " + old.toString());
+                    print("new: " + tmp.toString());
+                }
             }
         }
     }

@@ -45,7 +45,7 @@ public class InorderPipeline implements IInorderPipeline {
     private Set<Bypass> bypasses;
     /* Branch Predictor Parameters */
     private BranchPredictor branchPredictor;
-    private Hashtable<Long, Insn> pcInsnRecorder = new Hashtable<>(); // allows jump-back loop-up
+    //private Hashtable<Long, Insn> pcInsnRecorder = new Hashtable<>(); // allows jump-back loop-up
     /* Running Statics */
     private int insnCounter = 0;
     private int cycleCounter = 0;
@@ -92,7 +92,7 @@ public class InorderPipeline implements IInorderPipeline {
             Insn tmp = insnIterator.next();
             fetchInsn(tmp);
             // add to the pcInsnRecorder
-            pcInsnRecorder.put(tmp.pc, tmp);
+            //pcInsnRecorder.put(tmp.pc, tmp);
         }
         cycleCounter++;
 //        print(cycleCounter);
@@ -228,18 +228,11 @@ public class InorderPipeline implements IInorderPipeline {
         fetchInsn(getNextInsntoFetch(predictedPCtoFetch, iterator));
     }
 
-    private Insn getNextInsntoFetch(long nextPCtoFecth, Iterator<Insn> iterator) {
-        // check if it is a jump-back
-        Insn nextInsntoFecth = pcInsnRecorder.get(nextPCtoFecth);
-        // add jumped and next pc into recorder if not a jump-back branch
-        while (nextInsntoFecth == null && iterator.hasNext()) {
-            Insn tmp = iterator.next();
-            pcInsnRecorder.put(tmp.pc, tmp);
-            if (tmp.pc == nextPCtoFecth) {
-                nextInsntoFecth = tmp;
-            }
+    private Insn getNextInsntoFetch(Iterator<Insn> iterator) {
+        if (iterator.hasNext()) {
+            return iterator.next();
         }
-        return nextInsntoFecth;
+        return null;
     }
 
     public void print(int i) {
