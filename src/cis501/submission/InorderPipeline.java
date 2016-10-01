@@ -101,6 +101,7 @@ public class InorderPipeline implements IInorderPipeline {
             advance(insnIterator);
             cycleCounter++;
             // print(cycleCounter);
+            if (cycleCounter > 200) break;
         }
     }
 
@@ -211,13 +212,17 @@ public class InorderPipeline implements IInorderPipeline {
         /* ----------   FETCH   ---------- */
         if (getInsn(Stage.DECODE) != null) { return; }
         /* ------------------------------- */
-        if (insn_F == null) { return; } // TODO: nothing in FETCH stage (not due to flushed): no action
+        if (insn_F == null && insn_D != null) {
+            return;
+        } // TODO: nothing in FETCH stage (not due to flushed): no action
         if (insn_F != null) timingTrace.get(insn_F).append(" " + cycleCounter);
 
         advance(Stage.FETCH);
-        long predNextPC = branchPredictor.predict(insn_F.pc, insn_F.fallthroughPC());
+        long predNextPC = 0;
+        if (insn_F != null) predNextPC = branchPredictor.predict(insn_F.pc, insn_F.fallthroughPC());
         /* FETCH */
         if (lastFetcheInsn != null) {
+            if (insn_X != null) timingTrace.get(insn_X).append(" " + "{mispred}");
             fetchInsn(lastFetcheInsn);
             lastFetcheInsn = null;
         } else {
