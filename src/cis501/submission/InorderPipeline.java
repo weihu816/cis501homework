@@ -101,7 +101,7 @@ public class InorderPipeline implements IInorderPipeline {
             advance(insnIterator);
             cycleCounter++;
             // print(cycleCounter);
-            if (cycleCounter > 200) break;
+            //if (cycleCounter > 200) break;
         }
     }
 
