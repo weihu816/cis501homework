@@ -93,14 +93,14 @@ public class InorderPipeline implements IInorderPipeline {
             fetchInsn(tmp);
             // add to the pcInsnRecorder
             pcInsnRecorder.put(tmp.pc, tmp);
-            // print(cycleCounter);
         }
         cycleCounter++;
+//        print(cycleCounter);
         // end of change
         while (insnIterator.hasNext() || !isEmpty()) {
             advance(insnIterator);
             cycleCounter++;
-            // print(cycleCounter);
+//            print(cycleCounter);
         }
     }
 
@@ -266,6 +266,7 @@ public class InorderPipeline implements IInorderPipeline {
     private boolean stallOnD(Insn di, Insn xi, Insn mi) {
         if (di == null) return false;
         if (stallOnLoadToUseDependence(di, xi)) {
+            timingTrace.get(di).append(" " + "{load-use}");
             return true;
         }
         if (xi != null) {
