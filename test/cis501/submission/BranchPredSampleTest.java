@@ -4,6 +4,7 @@ import cis501.*;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Hashtable;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -12,7 +13,7 @@ import static org.junit.Assert.assertEquals;
 public class BranchPredSampleTest {
 
     // TODO: replace the path of trace file here
-    private static final String TRACE_FILE = "/Users/dongniwang/Desktop/CIS_501/501hw2/streamcluster-10M-v1.trace.gz";
+    private static final String TRACE_FILE = "/Users/apple/Desktop/streamcluster-10M-v1.trace.gz";
 
     private IBranchTargetBuffer btb;
     private IDirectionPredictor bimodal;
@@ -215,4 +216,25 @@ public class BranchPredSampleTest {
     }
 
     // add more tests here!
+    @Test
+    public void testNeverTakenTrace5K() {
+        final IDirectionPredictor never = new DirPredNeverTaken();
+        final IBranchTargetBuffer bigBtb = new BranchTargetBuffer(5);
+        InsnIterator uiter = new InsnIterator(TRACE_FILE, 59);
+        IInorderPipeline pl = new InorderPipeline(1, new BranchPredictor(never, bigBtb));
+        pl.run(uiter);
+    }
+
+    @Test
+    public void testTraceFile() {
+        Hashtable<Long, Insn> pcInsnRecorder = new Hashtable<>();
+        InsnIterator uiter = new InsnIterator(TRACE_FILE, 20);
+        int count = 0;
+        for (Insn insn : uiter) {
+            pcInsnRecorder.put(insn.pc, insn);
+            count++;
+        }
+        System.out.println(pcInsnRecorder.size());
+        System.out.println(count);
+    }
 }

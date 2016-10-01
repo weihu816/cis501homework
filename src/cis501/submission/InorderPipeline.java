@@ -95,12 +95,12 @@ public class InorderPipeline implements IInorderPipeline {
             //pcInsnRecorder.put(tmp.pc, tmp);
         }
         cycleCounter++;
-//        print(cycleCounter);
+        // print(cycleCounter);
         // end of change
         while (insnIterator.hasNext() || !isEmpty()) {
             advance(insnIterator);
             cycleCounter++;
-//            print(cycleCounter);
+            // print(cycleCounter);
         }
     }
 
@@ -164,8 +164,7 @@ public class InorderPipeline implements IInorderPipeline {
 
         /* ---------- WRITEBACK ---------- */
         if (insn_W != null) {
-            System.out.println(timingTrace.get(insn_W).toString() + " " + insn_W.asm);
-            timingTrace.remove(insn_W);
+            cleanAndPrintStageTimes(insn_W);
         }
         advance(Stage.WRITEBACK);
 
@@ -203,7 +202,6 @@ public class InorderPipeline implements IInorderPipeline {
         // check the decode stage insn with nextPC_E TODO: insn_D == null || nextPC_X != insn_D.pc
         if (nextPC_X != 0 && (insn_D == null || nextPC_X != insn_D.pc)) { // if we made wrong branch, flush the pipeline
             if (insn_X != null) timingTrace.get(insn_X).append(" " + "{mispred}");
-            if (insn_F != null && insn_F.pc == nextPC_X) System.out.println("!!!!!!!!!!!!!!");
             // waste 2 cycles: do not advance DECODE/FETCH, only over-write FETCH (re-fetch) and clean DECODE
             flush();
             /* FETCH */
@@ -259,7 +257,7 @@ public class InorderPipeline implements IInorderPipeline {
     private boolean stallOnD(Insn di, Insn xi, Insn mi) {
         if (di == null) return false;
         if (stallOnLoadToUseDependence(di, xi)) {
-            timingTrace.get(di).append(" " + "{load-use}");
+            timingTrace.get(di).append(" {load-use}");
             return true;
         }
         if (xi != null) {
@@ -323,5 +321,26 @@ public class InorderPipeline implements IInorderPipeline {
         if (di == null || xi == null) return false;
         return (xi.mem == MemoryOp.Load) && ( (di.srcReg2 != -1) && (di.srcReg2 == xi.dstReg) ||
                 ((di.srcReg1 != -1) && (di.srcReg1 == xi.dstReg) && (di.mem != MemoryOp.Store)));
+    }
+
+    private void cleanAndPrintStageTimes(Insn insn_W) {
+        String temp = timingTrace.get(insn_W).toString();
+        StringBuilder sb = new StringBuilder();
+        boolean isMisPred = false, isLoadUse = false;
+        if (temp.contains(" {mispred}")) {
+            isMisPred = true;
+            temp = temp.replace(" {mispred}", "");
+        }
+        if (temp.contains(" {load-use}")) {
+            isLoadUse = true;
+            temp = temp.replace(" {load-use}", "");
+        }
+        sb.append(temp + " " + insn_W.asm);
+        if (isMisPred && isLoadUse) sb.append(" {load-use, bmispred}");
+        else if (isMisPred) sb.append(" {bmispred}");
+        else if (isLoadUse) sb.append(" {load-use}");
+        else sb.append(" {}");
+        System.out.println(sb.toString());
+        timingTrace.remove(insn_W);
     }
 }
