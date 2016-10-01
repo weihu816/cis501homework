@@ -201,15 +201,16 @@ public class InorderPipeline implements IInorderPipeline {
         if (getInsn(Stage.EXECUTE) != null) { return; }
         /* ------------------------------- */
         // check the decode stage insn with nextPC_E TODO: insn_D == null || nextPC_X != insn_D.pc
-=        if (nextPC_X != 0 && (insn_D == null || nextPC_X != insn_D.pc)) { // if we made wrong branch, flush the pipeline
+        if (nextPC_X != 0 && (insn_D == null || nextPC_X != insn_D.pc)) { // if we made wrong branch, flush the pipeline
             if (insn_X != null) timingTrace.get(insn_X).append(" " + "{mispred}");
+            if (insn_F != null && insn_F.pc == nextPC_X) System.out.println("!!!!!!!!!!!!!!");
             // waste 2 cycles: do not advance DECODE/FETCH, only over-write FETCH (re-fetch) and clean DECODE
             flush();
             /* FETCH */
             fetchInsn(getNextInsntoFetch(nextPC_X, iterator));
             return;
         }
-        // Stall on Load-To-Use Dependence TODO: order of stall and flush
+        // Stall on Load-To-Use Dependence
         if (stallOnD(insn_D, insn_X, insn_M)) { return; }
         /* ------------------------------- */
         if (insn_D != null) timingTrace.get(insn_D).append(" " + cycleCounter);
@@ -223,8 +224,7 @@ public class InorderPipeline implements IInorderPipeline {
         if (insn_F != null) timingTrace.get(insn_F).append(" " + cycleCounter);
         advance(Stage.FETCH);
         long predictedPCtoFetch = branchPredictor.predict(insn_F.pc, insn_F.fallthroughPC());
-            /* FETCH */
-        System.out.println(insn_F.fallthroughPC() + " " + predictedPCtoFetch + " " + insn_F.pc);
+        /* FETCH */
         fetchInsn(getNextInsntoFetch(predictedPCtoFetch, iterator));
     }
 
