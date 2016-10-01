@@ -1,8 +1,5 @@
 package cis501.submission;
-
 import cis501.IBranchTargetBuffer;
-
-import java.util.Hashtable;
 
 public class BranchTargetBuffer implements IBranchTargetBuffer {
     private int indexBitM;
@@ -27,7 +24,7 @@ public class BranchTargetBuffer implements IBranchTargetBuffer {
     @Override
     public void train(long pc, long actual) {
         int indexed = index(pc);
-        System.out.format("%d%n indexed: %d%n", pc, indexed);
+        // System.out.format("%d%n indexed: %d%n", pc, indexed);
         bTBTable[indexed] = new BTBEntry(pc, actual);
     }
 
@@ -48,5 +45,5 @@ public class BranchTargetBuffer implements IBranchTargetBuffer {
 
         public long getTag() { return tag;}
         public long getTarget() { return target; }
-}
+    }
 }
