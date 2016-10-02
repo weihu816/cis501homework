@@ -21,7 +21,6 @@ public class DirPredBimodal implements IDirectionPredictor {
     @Override
     public Direction predict(long pc) {
         PredDirection predicted = predCountTable[index(pc)];
-        System.out.println("IN DP MODAL: " + predicted);
         return predicted.predict();
     }
 
@@ -30,7 +29,6 @@ public class DirPredBimodal implements IDirectionPredictor {
         int indexed = index(pc);
         PredDirection predReg = predCountTable[indexed];
         predCountTable[indexed] = predReg.train(actual);
-        System.out.println("IN DP MODAL trained: " + pc + "    " +indexed +" :: " + predCountTable[indexed]);
     }
 
     public int index(long pc) { return (int) pc & indexBitM;}
