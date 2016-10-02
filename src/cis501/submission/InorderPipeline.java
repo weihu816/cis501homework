@@ -173,7 +173,7 @@ public class InorderPipeline implements IInorderPipeline {
 
         /* ----------  EXECUTE  ---------- */
         // Only train at the first time
-        if (memDelay == additionalMemLatency) { System.out.println("DEBUG --- memDelay" + memDelay); train(insn_X); }
+        if (memDelay == additionalMemLatency) { train(insn_X); }
         /* ------------------------------- */
         if (memDelay > 0) { // There is additional latency
             if (memDelay == additionalMemLatency && insn_D == null) {
