@@ -165,13 +165,11 @@ public class InorderPipeline implements IInorderPipeline {
         /* ----------  MEMORY   ---------- */
         int memDelay = checkMemDelay(insn_M);
         if (memDelay == 0) {
-            if (getInsn(Stage.WRITEBACK) != null) { return; }
             currentMemTimer = 0;
-            /* ------------------------------- */
+            if (getInsn(Stage.WRITEBACK) != null) { throw new IllegalArgumentException(); }
             if (insn_M != null) timingTrace.get(insn_M).append(" " + cycleCounter);
             advance(Stage.MEMORY);
         }
-
 
         /* ----------  EXECUTE  ---------- */
         // Only train at the first time
@@ -188,23 +186,21 @@ public class InorderPipeline implements IInorderPipeline {
             return; // End of the case with additional latency
         }
         /* ------------------------------- */
-        if (getInsn(Stage.MEMORY) != null) { return; }
+        if (getInsn(Stage.MEMORY) != null) { throw new IllegalArgumentException(); }
         if (insn_X != null) timingTrace.get(insn_X).append(" " + cycleCounter);
         advance(Stage.EXECUTE);
 
 
         /* ----------   DECODE  ---------- */
+        if (getInsn(Stage.EXECUTE) != null) { throw new IllegalArgumentException(); }
         if (stallOnD(insn_D, insn_X, insn_M)) { return; }
-        if (getInsn(Stage.EXECUTE) != null) { return; }
         /* ------------------------------- */
-        if (memDelay == 0) {
-            if (insn_D != null) timingTrace.get(insn_D).append(" " + cycleCounter);
-            advance(Stage.DECODE);
-        }
+        if (insn_D != null) timingTrace.get(insn_D).append(" " + cycleCounter);
+        advance(Stage.DECODE);
 
 
         /* ----------   FETCH   ---------- */
-        if (getInsn(Stage.DECODE) != null) { return; }
+        if (getInsn(Stage.DECODE) != null) { throw new IllegalArgumentException(); }
         if (insn_F == null && insn_D != null) { return; }
         if (insn_F != null) timingTrace.get(insn_F).append(" " + cycleCounter);
         advance(Stage.FETCH);
