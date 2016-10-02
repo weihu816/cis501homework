@@ -37,7 +37,7 @@ enum Stage {
 
 public class InorderPipeline implements IInorderPipeline {
 
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
     // ----------------------------------------------------------------------
     /* Five stages herer: F D X M W */
     private Insn[] latches = new Insn[Stage.NUM_STAGES];
@@ -101,7 +101,7 @@ public class InorderPipeline implements IInorderPipeline {
         while (insnIterator.hasNext() || !isEmpty()) {
             advance(insnIterator);
             cycleCounter++;
-            if (cycleCounter % 100000 == 0) System.out.println(cycleCounter);
+            // if (cycleCounter % 100000 == 0) System.out.println(cycleCounter);
             // print(cycleCounter);
         }
     }

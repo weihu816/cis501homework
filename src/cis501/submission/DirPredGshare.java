@@ -4,7 +4,7 @@ import cis501.Direction;
 
 public class DirPredGshare extends DirPredBimodal {
     private int historyLimitMng;
-    private int historyRegister;
+    private int historyRegister = 0;
 
     public DirPredGshare(int indexBits, int historyBits) {
         super(indexBits);

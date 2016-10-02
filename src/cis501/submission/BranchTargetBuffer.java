@@ -30,7 +30,8 @@ public class BranchTargetBuffer implements IBranchTargetBuffer {
     public void train(long pc, long actual) {
         int indexed = index(pc);
         // System.out.format("%d%n indexed: %d%n", pc, indexed);
-        bTBTable[indexed] = new BTBEntry(pc, actual);
+        bTBTable[indexed].tag = pc;
+        bTBTable[indexed].tag = actual;
     }
 
     public int index(long pc) {
