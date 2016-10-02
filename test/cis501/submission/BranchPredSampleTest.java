@@ -240,4 +240,14 @@ public class BranchPredSampleTest {
         System.out.println(pcInsnRecorder.size());
         System.out.println(count);
     }
+
+    @Test
+    public void testGshareTrace5K() {
+        final IDirectionPredictor gshare = new DirPredBimodal(5);
+        final IBranchTargetBuffer bigBtb = new BranchTargetBuffer(5);
+        InsnIterator uiter = new InsnIterator(TRACE_FILE, 2500);
+        IInorderPipeline pl = new InorderPipeline(1, new BranchPredictor(gshare, bigBtb));
+        pl.run(uiter);
+        System.out.println("5000 GShare \n insn: " + pl.getInsns() + " cycles: " + pl.getCycles());
+    }
 }

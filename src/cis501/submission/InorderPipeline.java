@@ -175,10 +175,15 @@ public class InorderPipeline implements IInorderPipeline {
         // Only train at the first time
         if (memDelay == additionalMemLatency || memDelay == -1) { train(insn_X); }
         /* ------------------------------- */
+        /** BUGGY */
         if (memDelay > 0) { // There is additional latency
             if (memDelay == additionalMemLatency && insn_D == null) {
-                if (insn_X != null)
-                    fetch(insn_F, insn_X, iterator); // This fetched must be correct
+                if (insn_X != null) { // This fetched must be correct
+                    fetch(insn_F, insn_X, iterator);
+                } else { // new
+                    advance(Stage.FETCH);
+                    fetch(insn_F, insn_X, iterator);
+                }
             } else if (memDelay == additionalMemLatency - 1 && insn_D == null) {
                 if (insn_F != null) timingTrace.get(insn_F).append(" " + cycleCounter);
                 advance(Stage.FETCH);
@@ -186,6 +191,7 @@ public class InorderPipeline implements IInorderPipeline {
             }
             return; // End of the case with additional latency
         }
+        /** BUGGY */
         /* ------------------------------- */
         if (getInsn(Stage.MEMORY) != null) { throw new IllegalArgumentException(); }
         if (insn_X != null) timingTrace.get(insn_X).append(" " + cycleCounter);
