@@ -24,8 +24,8 @@ public class BranchPredictor {
         long btbTarget = btb.predict(predictorIndex);
         // if it's not a (taken) branch, just predict fallthroughPC
         if (0 == btbTarget) return fallthroughPC;
-
         Direction d = dp.predict(predictorIndex);
+        System.out.println("pre in predictor: "+ predictorIndex + " direction " + d.toString());
         switch (d) {
             case Taken:
                 return btbTarget;

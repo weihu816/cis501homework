@@ -37,7 +37,7 @@ enum Stage {
 
 public class InorderPipeline implements IInorderPipeline {
 
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
     // ----------------------------------------------------------------------
     /* Five stages herer: F D X M W */
     private Insn[] latches = new Insn[Stage.NUM_STAGES];
@@ -101,7 +101,7 @@ public class InorderPipeline implements IInorderPipeline {
         while (insnIterator.hasNext() || !isEmpty()) {
             advance(insnIterator);
             cycleCounter++;
-            if (cycleCounter % 100000 == 0) System.out.println(cycleCounter);
+            //if (cycleCounter % 100000 == 0) System.out.println(cycleCounter);
             // print(cycleCounter);
         }
     }
@@ -235,14 +235,14 @@ public class InorderPipeline implements IInorderPipeline {
             if(insn_X.branch == Direction.Taken) { // is a branch and is taken
                 long nextPC_X = insn_X.branchTarget;
                 branchPredictor.train(insn_X.pc, nextPC_X, Direction.Taken);
+                System.out.println("taken trained: " + branchPredictor.predict(insn_X.pc, insn_X.fallthroughPC()));
             } else { // is not a branch or is not taken
                 long nextPC_X = insn_X.fallthroughPC();
                 if (insn_X.branch!= null) { // train only if it's a branch insn
                     branchPredictor.train(insn_X.pc, nextPC_X, Direction.NotTaken);
+                    System.out.println("not taken trained: " + branchPredictor.predict(insn_X.pc, insn_X.fallthroughPC()));
                 }
             }
-
-            System.out.println("trained pre: " + branchPredictor.predict(insn_X.pc, insn_X.fallthroughPC()));
         }
 
     }
@@ -251,7 +251,9 @@ public class InorderPipeline implements IInorderPipeline {
      */
     private void fetch(Insn insn_F, Iterator<Insn> iterator) {
         long predNextPC = 0;
-        if (insn_F != null) predNextPC = branchPredictor.predict(insn_F.pc, insn_F.fallthroughPC());
+        if (insn_F != null) {
+            predNextPC = branchPredictor.predict(insn_F.pc, insn_F.fallthroughPC());
+        }
         Insn nextIns = null;
         if (iterator.hasNext()) {
             nextIns = iterator.next();

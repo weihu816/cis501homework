@@ -11,7 +11,7 @@ public class BranchTargetBuffer implements IBranchTargetBuffer {
             System.out.print("BranchTargetBuffer: Invalid indexBits");
             System.exit(1);
         }
-        this.indexBitM = (1 << indexBits - 1);
+        this.indexBitM = (1 << indexBits) - 1;
         this.bTBTable = new BTBEntry[1<<indexBits];
         // All BTB entries are initialized with zero for their tag and target value
         for (int i = 0; i < bTBTable.length; i++) {

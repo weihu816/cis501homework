@@ -13,7 +13,8 @@ import static org.junit.Assert.assertEquals;
 public class BranchPredSampleTest {
 
     // TODO: replace the path of trace file here
-    private static final String TRACE_FILE = "/Users/apple/Desktop/streamcluster-10M-v1.trace.gz";
+    private static final String TRACE_FILE = "/Users/dongniwang/Desktop/CIS_501/501hw2/streamcluster-10M-v1.trace.gz";//"/Users/apple/Desktop/streamcluster-10M-v1.trace.gz";
+
 
     private IBranchTargetBuffer btb;
     private IDirectionPredictor bimodal;
@@ -243,10 +244,10 @@ public class BranchPredSampleTest {
     }
 
     @Test
-    public void testBimodlTrace5K() {
+    public void testBimodlTrace5K() { // 3332 就是不对！！
         final IDirectionPredictor bimodal = new DirPredBimodal(5);
         final IBranchTargetBuffer bigBtb = new BranchTargetBuffer(5);
-        InsnIterator uiter = new InsnIterator(TRACE_FILE, 290);
+        InsnIterator uiter = new InsnIterator(TRACE_FILE, 3340);
         IInorderPipeline pl = new InorderPipeline(1, new BranchPredictor(bimodal, bigBtb));
         pl.run(uiter);
         System.out.println("5000 Bimodal \n insn: " + pl.getInsns() + " cycles: " + pl.getCycles());
