@@ -164,7 +164,7 @@ public class InorderPipeline implements IInorderPipeline {
 
         /* ----------  MEMORY   ---------- */
         int memDelay = checkMemDelay(insn_M);
-        if (memDelay == 0) {
+        if (memDelay <= 0) {
             currentMemTimer = 0;
             if (getInsn(Stage.WRITEBACK) != null) { throw new IllegalArgumentException(); }
             if (insn_M != null) timingTrace.get(insn_M).append(" " + cycleCounter);
@@ -173,7 +173,7 @@ public class InorderPipeline implements IInorderPipeline {
 
         /* ----------  EXECUTE  ---------- */
         // Only train at the first time
-        if (memDelay == additionalMemLatency) { train(insn_X); }
+        if (memDelay == additionalMemLatency || memDelay == -1) { train(insn_X); }
         /* ------------------------------- */
         if (memDelay > 0) { // There is additional latency
             if (memDelay == additionalMemLatency && insn_D == null) {
@@ -272,7 +272,7 @@ public class InorderPipeline implements IInorderPipeline {
      * If additionalMemLatency is 3, it will return 3 2 1 0
      */
     private int checkMemDelay(Insn mi) {
-        if (mi == null || mi.mem == null) return 0;
+        if (mi == null || mi.mem == null) return -1;
         boolean result =  currentMemTimer >= additionalMemLatency;
         if (result) return 0;
         int diff = additionalMemLatency - currentMemTimer;
