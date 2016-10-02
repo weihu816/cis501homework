@@ -125,13 +125,6 @@ public class InorderPipeline implements IInorderPipeline {
         latches[stage.i()] = null;
     }
 
-    private void flush() {
-        timingTrace.remove(latches[Stage.DECODE.i()]);
-        timingTrace.remove(latches[Stage.FETCH.i()]);
-        latches[Stage.DECODE.i()] = null;
-        latches[Stage.FETCH.i()] = null;
-    }
-
     private boolean isEmpty() {
         for (Insn insn : latches)
             if (insn != null) return false;
@@ -170,8 +163,8 @@ public class InorderPipeline implements IInorderPipeline {
 
 
         /* ----------  MEMORY   ---------- */
-        boolean memDelay = checkMemDelay(insn_M);
-        if (memDelay) {
+        int memDelay = checkMemDelay(insn_M);
+        if (memDelay == 0) {
             if (getInsn(Stage.WRITEBACK) != null) { return; }
             currentMemTimer = 0;
             /* ------------------------------- */
@@ -180,45 +173,63 @@ public class InorderPipeline implements IInorderPipeline {
         }
 
 
-
         /* ----------  EXECUTE  ---------- */
-        if (getInsn(Stage.MEMORY) != null) { return; }
+        // Only train at the first time
+        if (memDelay == additionalMemLatency) { train(insn_X); }
         /* ------------------------------- */
-        long nextPC_X = 0;
-        if (insn_X != null) {
-            insnCounter++;
-            if(insn_X.branch == Direction.Taken) { // is a branch and is taken
-                nextPC_X = insn_X.branchTarget;
-                branchPredictor.train(insn_X.pc, nextPC_X, Direction.Taken);
-            } else { // is not a branch or is not taken
-                nextPC_X = insn_X.fallthroughPC();
-                branchPredictor.train(insn_X.pc, nextPC_X, Direction.NotTaken);
+        if (memDelay > 0) { // There is additional latency
+            if (memDelay == additionalMemLatency && insn_D == null) {
+                fetch(insn_F, insn_X, iterator); // This fetched must be correct
+            } else if (memDelay == additionalMemLatency - 1 && insn_D == null) {
+                if (insn_F != null) timingTrace.get(insn_F).append(" " + cycleCounter);
+                advance(Stage.FETCH);
+                fetch(insn_F, insn_X, iterator);
             }
+            return; // End of the case with additional latency
         }
         /* ------------------------------- */
+        if (getInsn(Stage.MEMORY) != null) { return; }
         if (insn_X != null) timingTrace.get(insn_X).append(" " + cycleCounter);
-        if (!memDelay) advance(Stage.EXECUTE);
+        advance(Stage.EXECUTE);
 
 
         /* ----------   DECODE  ---------- */
+        if (stallOnD(insn_D, insn_X, insn_M)) { return; }
         if (getInsn(Stage.EXECUTE) != null) { return; }
         /* ------------------------------- */
-        // Stall on Load-To-Use Dependence
-        if (stallOnD(insn_D, insn_X, insn_M)) { return; }
-        /* ------------------------------- */
-        if (insn_D != null) timingTrace.get(insn_D).append(" " + cycleCounter);
-        advance(Stage.DECODE);
+        if (memDelay == 0) {
+            if (insn_D != null) timingTrace.get(insn_D).append(" " + cycleCounter);
+            advance(Stage.DECODE);
+        }
 
 
         /* ----------   FETCH   ---------- */
         if (getInsn(Stage.DECODE) != null) { return; }
-        /* ------------------------------- */
-        if (insn_F == null && insn_D != null) {
-            return;
-        } // TODO: nothing in FETCH stage (not due to flushed): no action
+        if (insn_F == null && insn_D != null) { return; }
         if (insn_F != null) timingTrace.get(insn_F).append(" " + cycleCounter);
-
         advance(Stage.FETCH);
+        fetch(insn_F, insn_X, iterator);
+    }
+
+    /**
+     * Train the predictor at the X stage
+     */
+    private void train(Insn insn_X) {
+        if (insn_X != null) { //  ececute has an insn
+            insnCounter++;
+            if(insn_X.branch == Direction.Taken) { // is a branch and is taken
+                long nextPC_X = insn_X.branchTarget;
+                branchPredictor.train(insn_X.pc, nextPC_X, Direction.Taken);
+            } else { // is not a branch or is not taken
+                long nextPC_X = insn_X.fallthroughPC();
+                branchPredictor.train(insn_X.pc, nextPC_X, Direction.NotTaken);
+            }
+        }
+    }
+    /**
+     * Fetch next insn, null if will not be correct
+     */
+    private void fetch(Insn insn_F, Insn insn_X, Iterator<Insn> iterator) {
         long predNextPC = 0;
         if (insn_F != null) predNextPC = branchPredictor.predict(insn_F.pc, insn_F.fallthroughPC());
         /* FETCH */
@@ -231,11 +242,12 @@ public class InorderPipeline implements IInorderPipeline {
         }
     }
 
+    /**
+     *
+     */
     private Insn getNextInsntoFetch(long predNextPC, Iterator<Insn> iterator) {
         Insn nextIns = null;
-        if (iterator.hasNext()) {
-            nextIns = iterator.next();
-        }
+        if (iterator.hasNext()) { nextIns = iterator.next(); }
         if(nextIns != null && predNextPC == nextIns.pc) {
             return nextIns;
         }
@@ -257,11 +269,17 @@ public class InorderPipeline implements IInorderPipeline {
         System.out.println(fi == null ? "/" : fi.mem + " " + fi.toString());
     }
 
-    private boolean checkMemDelay(Insn mi) {
-        if (mi == null || mi.mem == null) return true;
+    /**
+     * Return 0 if the pipeline is ok to proceed
+     * If additionalMemLatency is 3, it will return 3 2 1 0
+     */
+    private int checkMemDelay(Insn mi) {
+        if (mi == null || mi.mem == null) return 0;
         boolean result =  currentMemTimer >= additionalMemLatency;
+        if (result) return 0;
+        int diff = additionalMemLatency - currentMemTimer;
         if (!result) { currentMemTimer++; }
-        return result;
+        return diff;
     }
 
     private boolean stallOnD(Insn di, Insn xi, Insn mi) {
