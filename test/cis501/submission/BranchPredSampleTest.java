@@ -199,9 +199,10 @@ public class BranchPredSampleTest {
     public void testAlwaysTakenTrace() {
         final IDirectionPredictor always = new DirPredAlwaysTaken();
         final IBranchTargetBuffer bigBtb = new BranchTargetBuffer(10);
-        InsnIterator uiter = new InsnIterator(TRACE_FILE, -1);
+        InsnIterator uiter = new InsnIterator(TRACE_FILE, 50);
         IInorderPipeline pl = new InorderPipeline(0, new BranchPredictor(always, bigBtb));
         pl.run(uiter);
+        System.out.println(" :" + pl.getCycles());
         assertEquals(0.96, pl.getInsns() / (double) pl.getCycles(), 0.01);
     }
 
@@ -212,6 +213,7 @@ public class BranchPredSampleTest {
         InsnIterator uiter = new InsnIterator(TRACE_FILE, -1);
         IInorderPipeline pl = new InorderPipeline(0, new BranchPredictor(never, bigBtb));
         pl.run(uiter);
+        System.out.println(" :" + pl.getCycles());
         assertEquals(0.81, pl.getInsns() / (double) pl.getCycles(), 0.01);
     }
 

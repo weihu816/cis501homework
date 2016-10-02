@@ -218,7 +218,9 @@ public class InorderPipeline implements IInorderPipeline {
                 branchPredictor.train(insn_X.pc, nextPC_X, Direction.Taken);
             } else { // is not a branch or is not taken
                 long nextPC_X = insn_X.fallthroughPC();
-                branchPredictor.train(insn_X.pc, nextPC_X, Direction.NotTaken);
+                if (insn_X.branch!= null) { // train only if it's a branch insn
+                    branchPredictor.train(insn_X.pc, nextPC_X, Direction.NotTaken);
+                }
             }
         }
     }
