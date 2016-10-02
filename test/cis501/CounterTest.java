@@ -60,4 +60,13 @@ public class CounterTest {
         assertEquals(1^0, 1);
         assertEquals(0^0, 0);
     }
+
+    @Test
+    public void testIndex() {
+        int indexBitM = (1<<5)-1;
+        System.out.println(" " + indexBitM + "  " + index(100, indexBitM));
+    }
+
+
+    public int index(long pc, int indexBitM) { return (int) pc & indexBitM;}
 }
