@@ -156,9 +156,9 @@ public class InorderPipeline implements IInorderPipeline {
         final Insn insn_F = getInsn(Stage.FETCH);
 
         /* ---------- WRITEBACK ---------- */
-        if (insn_W != null) {
-            cleanAndPrintStageTimes(insn_W);
-        }
+//        if (insn_W != null) {
+//            cleanAndPrintStageTimes(insn_W);
+//        }
         advance(Stage.WRITEBACK);
 
 
@@ -221,6 +221,7 @@ public class InorderPipeline implements IInorderPipeline {
         if (insn_X != null) { //  ececute has an insn
             insnCounter++;
             System.out.println("DEBUG --- train/current insn: " + getInsns());
+            System.out.println("untrained pre: " + branchPredictor.predict(insn_X.pc, insn_X.fallthroughPC()));
             if(insn_X.branch == Direction.Taken) { // is a branch and is taken
                 long nextPC_X = insn_X.branchTarget;
                 branchPredictor.train(insn_X.pc, nextPC_X, Direction.Taken);
@@ -230,7 +231,10 @@ public class InorderPipeline implements IInorderPipeline {
                     branchPredictor.train(insn_X.pc, nextPC_X, Direction.NotTaken);
                 }
             }
+
+            System.out.println("trained pre: " + branchPredictor.predict(insn_X.pc, insn_X.fallthroughPC()));
         }
+
     }
     /**
      * Fetch next insn, null if will not be correct

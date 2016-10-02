@@ -242,12 +242,12 @@ public class BranchPredSampleTest {
     }
 
     @Test
-    public void testGshareTrace5K() {
-        final IDirectionPredictor gshare = new DirPredBimodal(5);
+    public void testBimodlTrace5K() {
+        final IDirectionPredictor bimodal = new DirPredBimodal(5);
         final IBranchTargetBuffer bigBtb = new BranchTargetBuffer(5);
-        InsnIterator uiter = new InsnIterator(TRACE_FILE, 2500);
-        IInorderPipeline pl = new InorderPipeline(1, new BranchPredictor(gshare, bigBtb));
+        InsnIterator uiter = new InsnIterator(TRACE_FILE, 290);
+        IInorderPipeline pl = new InorderPipeline(1, new BranchPredictor(bimodal, bigBtb));
         pl.run(uiter);
-        System.out.println("5000 GShare \n insn: " + pl.getInsns() + " cycles: " + pl.getCycles());
+        System.out.println("5000 Bimodal \n insn: " + pl.getInsns() + " cycles: " + pl.getCycles());
     }
 }
