@@ -233,7 +233,9 @@ public class InorderPipeline implements IInorderPipeline {
         if (insn_F != null) predNextPC = branchPredictor.predict(insn_F.pc, insn_F.fallthroughPC());
         /* FETCH */
         if (lastFetcheInsn != null) {
-            if (insn_X != null) timingTrace.get(insn_X).append(" " + "{mispred}");
+            if (insn_X != null) {
+                timingTrace.get(insn_X).append(" " + "{mispred}");
+            }
             fetchInsn(lastFetcheInsn);
             lastFetcheInsn = null;
         } else {
