@@ -31,7 +31,7 @@ public class BranchTargetBuffer implements IBranchTargetBuffer {
         int indexed = index(pc);
         // System.out.format("%d%n indexed: %d%n", pc, indexed);
         bTBTable[indexed].tag = pc;
-        bTBTable[indexed].tag = actual;
+        bTBTable[indexed].target = actual;
     }
 
     public int index(long pc) {
