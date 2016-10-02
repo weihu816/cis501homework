@@ -13,7 +13,7 @@ import static org.junit.Assert.assertEquals;
 public class BranchPredSampleTest {
 
     // TODO: replace the path of trace file here
-    private static final String TRACE_FILE = "/Users/dongniwang/Desktop/CIS_501/501hw2/streamcluster-10M-v1.trace.gz";
+    private static final String TRACE_FILE = "/Users/apple/Desktop/streamcluster-10M-v1.trace.gz";
 
     private IBranchTargetBuffer btb;
     private IDirectionPredictor bimodal;
@@ -222,9 +222,11 @@ public class BranchPredSampleTest {
     public void testNeverTakenTrace5K() {
         final IDirectionPredictor never = new DirPredNeverTaken();
         final IBranchTargetBuffer bigBtb = new BranchTargetBuffer(5);
-        InsnIterator uiter = new InsnIterator(TRACE_FILE, 59);
+        InsnIterator uiter = new InsnIterator(TRACE_FILE, 5000);
         IInorderPipeline pl = new InorderPipeline(1, new BranchPredictor(never, bigBtb));
         pl.run(uiter);
+        System.out.println(pl.getInsns());
+        System.out.println(pl.getCycles());
     }
 
     @Test
