@@ -222,9 +222,10 @@ public class BranchPredSampleTest {
     public void testNeverTakenTrace5K() {
         final IDirectionPredictor never = new DirPredNeverTaken();
         final IBranchTargetBuffer bigBtb = new BranchTargetBuffer(5);
-        InsnIterator uiter = new InsnIterator(TRACE_FILE, 59);
+        InsnIterator uiter = new InsnIterator(TRACE_FILE, 50);
         IInorderPipeline pl = new InorderPipeline(1, new BranchPredictor(never, bigBtb));
         pl.run(uiter);
+        System.out.println("5000 Never Taken\n insn: " + pl.getInsns() + " cycles: " + pl.getCycles());
     }
 
     @Test
