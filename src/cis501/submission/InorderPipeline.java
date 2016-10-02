@@ -37,6 +37,7 @@ enum Stage {
 
 public class InorderPipeline implements IInorderPipeline {
 
+    private static final boolean DEBUG = false;
     // ----------------------------------------------------------------------
     /* Five stages herer: F D X M W */
     private Insn[] latches = new Insn[Stage.NUM_STAGES];
@@ -45,11 +46,11 @@ public class InorderPipeline implements IInorderPipeline {
     private Set<Bypass> bypasses;
     /* Branch Predictor Parameters */
     private BranchPredictor branchPredictor;
-    private Insn lastFetcheInsn;
     /* Running Statics */
     private int insnCounter = 0;
     private int cycleCounter = 0;
     private Map<Insn, StringBuilder> timingTrace = new HashMap<>();
+    private Queue<Insn> queue = new LinkedList<>();
 
     /**
      * Create a new pipeline with the given additional memory latency.
@@ -100,6 +101,7 @@ public class InorderPipeline implements IInorderPipeline {
         while (insnIterator.hasNext() || !isEmpty()) {
             advance(insnIterator);
             cycleCounter++;
+            if (cycleCounter % 100000 == 0) System.out.println(cycleCounter);
             // print(cycleCounter);
         }
     }
@@ -139,7 +141,7 @@ public class InorderPipeline implements IInorderPipeline {
     }
 
     private void fetchInsn(Insn insn) {
-        timingTrace.put(insn, new StringBuilder(String.valueOf(cycleCounter)));
+        if (insn != null) timingTrace.put(insn, new StringBuilder(String.valueOf(cycleCounter)));
         latches[Stage.FETCH.i()] = insn;
     }
 
@@ -156,9 +158,10 @@ public class InorderPipeline implements IInorderPipeline {
         final Insn insn_F = getInsn(Stage.FETCH);
 
         /* ---------- WRITEBACK ---------- */
-//        if (insn_W != null) {
-//            cleanAndPrintStageTimes(insn_W);
-//        }
+
+        if (DEBUG && insn_W != null) {
+            cleanAndPrintStageTimes(insn_W);
+        }
         advance(Stage.WRITEBACK);
 
 
@@ -167,7 +170,7 @@ public class InorderPipeline implements IInorderPipeline {
         if (memDelay <= 0) {
             currentMemTimer = 0;
             if (getInsn(Stage.WRITEBACK) != null) { throw new IllegalArgumentException(); }
-            if (insn_M != null) timingTrace.get(insn_M).append(" " + cycleCounter);
+            if (DEBUG && insn_M != null) timingTrace.get(insn_M).append(" " + cycleCounter);
             advance(Stage.MEMORY);
         }
 
@@ -175,26 +178,32 @@ public class InorderPipeline implements IInorderPipeline {
         // Only train at the first time
         if (memDelay == additionalMemLatency || memDelay == -1) { train(insn_X); }
         /* ------------------------------- */
-        /** BUGGY */
         if (memDelay > 0) { // There is additional latency
-            if (memDelay == additionalMemLatency && insn_D == null) {
-                if (insn_X != null) { // This fetched must be correct
-                    fetch(insn_F, insn_X, iterator);
-                } else { // new
+            if (insn_X != null) {
+                if (memDelay == additionalMemLatency && insn_D == null) {
+                    fetchCorrect(iterator); // This fetched must be correct
+                } else if (memDelay == additionalMemLatency - 1) {
+                    if (DEBUG && insn_F != null) timingTrace.get(insn_F).append(" " + cycleCounter);
                     advance(Stage.FETCH);
-                    fetch(insn_F, insn_X, iterator);
+                    fetch(insn_F, iterator);
                 }
-            } else if (memDelay == additionalMemLatency - 1 && insn_D == null) {
-                if (insn_F != null) timingTrace.get(insn_F).append(" " + cycleCounter);
-                advance(Stage.FETCH);
-                fetch(insn_F, insn_X, iterator);
+            } else {
+                if (memDelay == additionalMemLatency && insn_D == null) {
+                    if (DEBUG && insn_F != null) timingTrace.get(insn_F).append(" " + cycleCounter);
+                    advance(Stage.FETCH);
+                    fetch(insn_F, iterator);
+                } else if (memDelay == additionalMemLatency - 1 && insn_D != null) {
+                    timingTrace.get(insn_D).append(" " + cycleCounter);
+                    advance(Stage.DECODE);
+                    advance(Stage.FETCH);
+                    fetch(insn_F, iterator);
+                }
             }
             return; // End of the case with additional latency
         }
-        /** BUGGY */
         /* ------------------------------- */
         if (getInsn(Stage.MEMORY) != null) { throw new IllegalArgumentException(); }
-        if (insn_X != null) timingTrace.get(insn_X).append(" " + cycleCounter);
+        if (DEBUG && insn_X != null) timingTrace.get(insn_X).append(" " + cycleCounter);
         advance(Stage.EXECUTE);
 
 
@@ -202,16 +211,17 @@ public class InorderPipeline implements IInorderPipeline {
         if (getInsn(Stage.EXECUTE) != null) { throw new IllegalArgumentException(); }
         if (stallOnD(insn_D, insn_X, insn_M)) { return; }
         /* ------------------------------- */
-        if (insn_D != null) timingTrace.get(insn_D).append(" " + cycleCounter);
+        if (DEBUG && insn_D != null) timingTrace.get(insn_D).append(" " + cycleCounter);
         advance(Stage.DECODE);
 
 
         /* ----------   FETCH   ---------- */
         if (getInsn(Stage.DECODE) != null) { throw new IllegalArgumentException(); }
-        if (insn_F == null && insn_D != null) { return; }
-        if (insn_F != null) timingTrace.get(insn_F).append(" " + cycleCounter);
+        if (DEBUG && insn_F != null) timingTrace.get(insn_F).append(" " + cycleCounter);
         advance(Stage.FETCH);
-        fetch(insn_F, insn_X, iterator);
+        if (insn_F == null && insn_D != null) { fetchInsn(null); }
+        else if (insn_F == null && insn_D == null) { fetchCorrect(iterator); }
+        else { fetch(insn_F, iterator); }
     }
 
     /**
@@ -239,32 +249,30 @@ public class InorderPipeline implements IInorderPipeline {
     /**
      * Fetch next insn, null if will not be correct
      */
-    private void fetch(Insn insn_F, Insn insn_X, Iterator<Insn> iterator) {
+    private void fetch(Insn insn_F, Iterator<Insn> iterator) {
         long predNextPC = 0;
         if (insn_F != null) predNextPC = branchPredictor.predict(insn_F.pc, insn_F.fallthroughPC());
-        /* FETCH */
-        if (lastFetcheInsn != null) {
-            if (insn_X != null) {
-                timingTrace.get(insn_X).append(" " + "{mispred}");
-            }
-            fetchInsn(lastFetcheInsn);
-            lastFetcheInsn = null;
+        Insn nextIns = null;
+        if (iterator.hasNext()) {
+            nextIns = iterator.next();
+        }
+        if (nextIns != null && predNextPC == nextIns.pc) {
+            fetchInsn(nextIns);
         } else {
-            fetchInsn(getNextInsntoFetch(predNextPC, iterator));
+            if (DEBUG && insn_F != null) timingTrace.get(insn_F).append(" " + "{mispred}");
+            queue.offer(nextIns);
+            fetchInsn(null);
         }
     }
 
-    /**
-     *
-     */
-    private Insn getNextInsntoFetch(long predNextPC, Iterator<Insn> iterator) {
+    private void fetchCorrect(Iterator<Insn> iterator) {
         Insn nextIns = null;
-        if (iterator.hasNext()) { nextIns = iterator.next(); }
-        if(nextIns != null && predNextPC == nextIns.pc) {
-            return nextIns;
+        if (queue.isEmpty()) {
+            if (iterator.hasNext()) { nextIns = iterator.next(); }
+        } else {
+            nextIns = queue.poll();
         }
-        this.lastFetcheInsn = nextIns;
-        return null;
+        fetchInsn(nextIns);
     }
 
     public void print(int i) {
@@ -297,7 +305,7 @@ public class InorderPipeline implements IInorderPipeline {
     private boolean stallOnD(Insn di, Insn xi, Insn mi) {
         if (di == null) return false;
         if (stallOnLoadToUseDependence(di, xi)) {
-            timingTrace.get(di).append(" {load-use}");
+            if (DEBUG) timingTrace.get(di).append(" {load-use}");
             return true;
         }
         if (xi != null) {
@@ -381,6 +389,6 @@ public class InorderPipeline implements IInorderPipeline {
         else if (isLoadUse) sb.append(" {load-use}");
         else sb.append(" {}");
         System.out.println(sb.toString());
-        timingTrace.remove(insn_W);
+        if(DEBUG) timingTrace.remove(insn_W);
     }
 }
