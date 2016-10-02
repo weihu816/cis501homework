@@ -125,13 +125,6 @@ public class InorderPipeline implements IInorderPipeline {
         latches[stage.i()] = null;
     }
 
-    private void flush() {
-        timingTrace.remove(latches[Stage.DECODE.i()]);
-        timingTrace.remove(latches[Stage.FETCH.i()]);
-        latches[Stage.DECODE.i()] = null;
-        latches[Stage.FETCH.i()] = null;
-    }
-
     private boolean isEmpty() {
         for (Insn insn : latches)
             if (insn != null) return false;
@@ -181,25 +174,24 @@ public class InorderPipeline implements IInorderPipeline {
 
 
         /* ----------  EXECUTE  ---------- */
-        // at the end of EXECUTE, check if the current insn is branch
         // Only train at the first time
         if (memDelay == additionalMemLatency) { train(insn_X); }
         /* ------------------------------- */
-        if (memDelay > 0) {
+        if (memDelay > 0) { // There is additional latency
             if (memDelay == additionalMemLatency && insn_D == null) {
-                flush();
-                fetch(insn_F, insn_X, iterator);
-            } else if (memDelay == additionalMemLatency - 1 && insn_D == null && insn_F != null) {
-                // you can advance FETCH and do prediction fetch new
+                fetch(insn_F, insn_X, iterator); // This fetched must be correct
+            } else if (memDelay == additionalMemLatency - 1 && insn_D == null) {
+                if (insn_F != null) timingTrace.get(insn_F).append(" " + cycleCounter);
                 advance(Stage.FETCH);
                 fetch(insn_F, insn_X, iterator);
             }
-            return;
-        } else {
-            if (getInsn(Stage.MEMORY) != null) { return; }
-            if (insn_X != null) timingTrace.get(insn_X).append(" " + cycleCounter);
-            advance(Stage.EXECUTE);
+            return; // End of the case with additional latency
         }
+        /* ------------------------------- */
+        if (getInsn(Stage.MEMORY) != null) { return; }
+        if (insn_X != null) timingTrace.get(insn_X).append(" " + cycleCounter);
+        advance(Stage.EXECUTE);
+
 
         /* ----------   DECODE  ---------- */
         if (stallOnD(insn_D, insn_X, insn_M)) { return; }
@@ -223,20 +215,19 @@ public class InorderPipeline implements IInorderPipeline {
      * Train the predictor at the X stage
      */
     private void train(Insn insn_X) {
-        long nextPC_X = 0; // if 0, no action; else, need to check the decode stage insn
         if (insn_X != null) { //  ececute has an insn
             insnCounter++;
             if(insn_X.branch == Direction.Taken) { // is a branch and is taken
-                nextPC_X = insn_X.branchTarget;
+                long nextPC_X = insn_X.branchTarget;
                 branchPredictor.train(insn_X.pc, nextPC_X, Direction.Taken);
             } else { // is not a branch or is not taken
-                nextPC_X = insn_X.fallthroughPC();
+                long nextPC_X = insn_X.fallthroughPC();
                 branchPredictor.train(insn_X.pc, nextPC_X, Direction.NotTaken);
             }
         }
     }
     /**
-     * Fetch next insn, null if will be correct
+     * Fetch next insn, null if will not be correct
      */
     private void fetch(Insn insn_F, Insn insn_X, Iterator<Insn> iterator) {
         long predNextPC = 0;
@@ -251,11 +242,12 @@ public class InorderPipeline implements IInorderPipeline {
         }
     }
 
+    /**
+     *
+     */
     private Insn getNextInsntoFetch(long predNextPC, Iterator<Insn> iterator) {
         Insn nextIns = null;
-        if (iterator.hasNext()) {
-            nextIns = iterator.next();
-        }
+        if (iterator.hasNext()) { nextIns = iterator.next(); }
         if(nextIns != null && predNextPC == nextIns.pc) {
             return nextIns;
         }
@@ -277,6 +269,10 @@ public class InorderPipeline implements IInorderPipeline {
         System.out.println(fi == null ? "/" : fi.mem + " " + fi.toString());
     }
 
+    /**
+     * Return 0 if the pipeline is ok to proceed
+     * If additionalMemLatency is 3, it will return 3 2 1 0
+     */
     private int checkMemDelay(Insn mi) {
         if (mi == null || mi.mem == null) return 0;
         boolean result =  currentMemTimer >= additionalMemLatency;
