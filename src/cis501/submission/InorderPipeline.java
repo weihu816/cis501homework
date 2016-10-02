@@ -177,7 +177,8 @@ public class InorderPipeline implements IInorderPipeline {
         /* ------------------------------- */
         if (memDelay > 0) { // There is additional latency
             if (memDelay == additionalMemLatency && insn_D == null) {
-                fetch(insn_F, insn_X, iterator); // This fetched must be correct
+                if (insn_X != null)
+                    fetch(insn_F, insn_X, iterator); // This fetched must be correct
             } else if (memDelay == additionalMemLatency - 1 && insn_D == null) {
                 if (insn_F != null) timingTrace.get(insn_F).append(" " + cycleCounter);
                 advance(Stage.FETCH);
