@@ -18,8 +18,9 @@ public class DirPredGshare extends DirPredBimodal {
 
     @Override
     public void train(long pc, Direction actual) {
-        updateHistory(actual);
         super.train(pc ^ this.historyRegister, actual);
+        updateHistory(actual);
+
     }
 
     public void updateHistory(Direction actual) {

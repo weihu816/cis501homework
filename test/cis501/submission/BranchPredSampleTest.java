@@ -200,7 +200,7 @@ public class BranchPredSampleTest {
     public void testAlwaysTakenTrace() {
         final IDirectionPredictor always = new DirPredAlwaysTaken();
         final IBranchTargetBuffer bigBtb = new BranchTargetBuffer(10);
-        InsnIterator uiter = new InsnIterator(TRACE_FILE, 50);
+        InsnIterator uiter = new InsnIterator(TRACE_FILE, -1);
         IInorderPipeline pl = new InorderPipeline(0, new BranchPredictor(always, bigBtb));
         pl.run(uiter);
         System.out.println(" :" + pl.getCycles());
@@ -231,6 +231,17 @@ public class BranchPredSampleTest {
     }
 
     @Test
+    public void testGshareTrace5K() {
+        final IDirectionPredictor never = new DirPredGshare(5,5);
+        final IBranchTargetBuffer bigBtb = new BranchTargetBuffer(5);
+        InsnIterator uiter = new InsnIterator(TRACE_FILE, 5000);
+        IInorderPipeline pl = new InorderPipeline(1, new BranchPredictor(never, bigBtb));
+        pl.run(uiter);
+        System.out.println("5000 Gshare \n insn: " + pl.getInsns() + " cycles: " + pl.getCycles());
+
+    }
+
+    @Test
     public void testTraceFile() {
         Hashtable<Long, Insn> pcInsnRecorder = new Hashtable<>();
         InsnIterator uiter = new InsnIterator(TRACE_FILE, 20);
@@ -247,9 +258,35 @@ public class BranchPredSampleTest {
     public void testBimodlTrace5K() { // 3332 就是不对！！
         final IDirectionPredictor bimodal = new DirPredBimodal(5);
         final IBranchTargetBuffer bigBtb = new BranchTargetBuffer(5);
-        InsnIterator uiter = new InsnIterator(TRACE_FILE, 3340);
+        InsnIterator uiter = new InsnIterator(TRACE_FILE, 5000);
         IInorderPipeline pl = new InorderPipeline(1, new BranchPredictor(bimodal, bigBtb));
         pl.run(uiter);
         System.out.println("5000 Bimodal \n insn: " + pl.getInsns() + " cycles: " + pl.getCycles());
+    }
+
+    @Test
+    public void runBimodalFull() {
+        for(int i = 4; i < 19; i++) {
+            final IDirectionPredictor bimodal = new DirPredBimodal(i);
+            final IBranchTargetBuffer bigBtb = new BranchTargetBuffer(i);
+            InsnIterator uiter = new InsnIterator(TRACE_FILE, -1);
+            IInorderPipeline pl = new InorderPipeline(1, new BranchPredictor(bimodal, bigBtb));
+            pl.run(uiter);
+            System.out.println("Bimodal \n insn: " + pl.getInsns() + " cycles: " + pl.getCycles());
+            System.out.println("--- counters: " + i + "   IPC:" + pl.getCycles()/pl.getCycles());
+        }
+    }
+
+    @Test
+    public void runGshareFull() {
+        for(int i = 4; i < 19; i++) {
+            final IDirectionPredictor gshare = new DirPredGshare(i, i);
+            final IBranchTargetBuffer bigBtb = new BranchTargetBuffer(i);
+            InsnIterator uiter = new InsnIterator(TRACE_FILE, -1);
+            IInorderPipeline pl = new InorderPipeline(1, new BranchPredictor(gshare, bigBtb));
+            pl.run(uiter);
+            System.out.println("Gshare \n insn: " + pl.getInsns() + " cycles: " + pl.getCycles());
+            System.out.println("--- counters: " + i + "   IPC:" + pl.getCycles()*1.0/pl.getCycles());
+        }
     }
 }
