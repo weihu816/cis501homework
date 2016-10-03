@@ -140,7 +140,7 @@ public class InorderPipeline implements IInorderPipeline {
     }
 
     private void fetchInsn(Insn insn) {
-        if (insn != null) timingTrace.put(insn, new StringBuilder(String.valueOf(cycleCounter)));
+        if (DEBUG && insn != null) timingTrace.put(insn, new StringBuilder(String.valueOf(cycleCounter)));
         latches[Stage.FETCH.i()] = insn;
     }
 
@@ -190,7 +190,7 @@ public class InorderPipeline implements IInorderPipeline {
                     advance(Stage.FETCH);
                     fetch(insn_F, iterator);
                 } else if (memDelay == additionalMemLatency - 1 && insn_D != null) {
-                    timingTrace.get(insn_D).append(" " + cycleCounter);
+                    if (DEBUG && insn_D != null) timingTrace.get(insn_D).append(" " + cycleCounter);
                     advance(Stage.DECODE);
                     advance(Stage.FETCH);
                     fetch(insn_F, iterator);
@@ -384,6 +384,6 @@ public class InorderPipeline implements IInorderPipeline {
         else if (isLoadUse) sb.append(" {load-use}");
         else sb.append(" {}");
         System.out.println(sb.toString());
-        if(DEBUG) timingTrace.remove(insn_W);
+        timingTrace.remove(insn_W);
     }
 }
