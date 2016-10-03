@@ -37,7 +37,7 @@ enum Stage {
 
 public class InorderPipeline implements IInorderPipeline {
 
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     // ----------------------------------------------------------------------
     /* Five stages herer: F D X M W */
     private Insn[] latches = new Insn[Stage.NUM_STAGES];
