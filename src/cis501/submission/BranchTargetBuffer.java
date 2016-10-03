@@ -7,9 +7,8 @@ public class BranchTargetBuffer implements IBranchTargetBuffer {
     private BTBEntry[] bTBTable; // use a hashtable as BTBTable to avoid initializing empty entry
 
     public BranchTargetBuffer(int indexBits) {
-        if(indexBits > 32) {
-            System.out.print("BranchTargetBuffer: Invalid indexBits");
-            System.exit(1);
+        if(indexBits >= 32) {
+            throw new IllegalArgumentException("BranchTargetBuffer: Invalid indexBits");
         }
         this.indexBitM = (1 << indexBits) - 1;
         this.bTBTable = new BTBEntry[1<<indexBits];
@@ -29,7 +28,6 @@ public class BranchTargetBuffer implements IBranchTargetBuffer {
     @Override
     public void train(long pc, long actual) {
         int indexed = index(pc);
-        // System.out.format("%d%n indexed: %d%n", pc, indexed);
         bTBTable[indexed].tag = pc;
         bTBTable[indexed].target = actual;
     }

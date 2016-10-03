@@ -101,7 +101,6 @@ public class InorderPipeline implements IInorderPipeline {
         while (insnIterator.hasNext() || !isEmpty()) {
             advance(insnIterator);
             cycleCounter++;
-            //if (cycleCounter % 100000 == 0) System.out.println(cycleCounter);
             // print(cycleCounter);
         }
     }
@@ -159,9 +158,7 @@ public class InorderPipeline implements IInorderPipeline {
 
         /* ---------- WRITEBACK ---------- */
 
-        if (DEBUG && insn_W != null) {
-            cleanAndPrintStageTimes(insn_W);
-        }
+        if (DEBUG && insn_W != null) { cleanAndPrintStageTimes(insn_W); }
         advance(Stage.WRITEBACK);
 
 
@@ -230,17 +227,13 @@ public class InorderPipeline implements IInorderPipeline {
     private void train(Insn insn_X) {
         if (insn_X != null) { //  ececute has an insn
             insnCounter++;
-            System.out.println("DEBUG --- train/current insn: " + getInsns());
-            System.out.println("untrained pre: " + branchPredictor.predict(insn_X.pc, insn_X.fallthroughPC()));
             if(insn_X.branch == Direction.Taken) { // is a branch and is taken
                 long nextPC_X = insn_X.branchTarget;
                 branchPredictor.train(insn_X.pc, nextPC_X, Direction.Taken);
-                System.out.println("taken trained: " + branchPredictor.predict(insn_X.pc, insn_X.fallthroughPC()));
             } else { // is not a branch or is not taken
                 long nextPC_X = insn_X.fallthroughPC();
                 if (insn_X.branch!= null) { // train only if it's a branch insn
                     branchPredictor.train(insn_X.pc, nextPC_X, Direction.NotTaken);
-                    System.out.println("not taken trained: " + branchPredictor.predict(insn_X.pc, insn_X.fallthroughPC()));
                 }
             }
         }
@@ -261,7 +254,7 @@ public class InorderPipeline implements IInorderPipeline {
         if (nextIns != null && predNextPC == nextIns.pc) {
             fetchInsn(nextIns);
         } else {
-            if (DEBUG && insn_F != null) timingTrace.get(insn_F).append(" " + "{mispred}");
+            if (DEBUG && insn_F != null) timingTrace.get(insn_F).append(" " + "{bmispred}");
             queue.offer(nextIns);
             fetchInsn(null);
         }
@@ -377,9 +370,9 @@ public class InorderPipeline implements IInorderPipeline {
         String temp = timingTrace.get(insn_W).toString();
         StringBuilder sb = new StringBuilder();
         boolean isMisPred = false, isLoadUse = false;
-        if (temp.contains(" {mispred}")) {
+        if (temp.contains(" {bmispred}")) {
             isMisPred = true;
-            temp = temp.replace(" {mispred}", "");
+            temp = temp.replace(" {bmispred}", "");
         }
         if (temp.contains(" {load-use}")) {
             isLoadUse = true;
