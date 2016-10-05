@@ -80,6 +80,11 @@ public class InorderPipeline implements IInorderPipeline {
         this.branchPredictor = branchPredictor;
     }
 
+    /** Cache homework ctor */
+    public InorderPipeline(BranchPredictor bp, ICache ic, ICache dc) {
+        
+    }
+
     @Override
     public String[] groupMembers() {
         return new String[]{"Wei Hu", "Dongni Wang"};
