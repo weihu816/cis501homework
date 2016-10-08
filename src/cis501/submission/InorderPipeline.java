@@ -42,7 +42,7 @@ public class InorderPipeline implements IInorderPipeline {
     /* Five stages herer: F D X M W */
     private Insn[] latches = new Insn[Stage.NUM_STAGES];
     /* Pipeline Parameters */
-    private int additionalMemLatency = 0, currentMemTimer = 0;
+    private int additionalMemLatency = 0, currentMemTimer = 0, fetchLatency = 0, memoryLatency = 0;
     private Set<Bypass> bypasses;
     /* Branch Predictor Parameters */
     private BranchPredictor branchPredictor;
@@ -51,6 +51,8 @@ public class InorderPipeline implements IInorderPipeline {
     private int cycleCounter = 0;
     private Map<Insn, StringBuilder> timingTrace = new HashMap<>();
     private Queue<Insn> queue = new LinkedList<>();
+    /* Cache */
+    private ICache insnCache, dataCache;
 
     /**
      * Create a new pipeline with the given additional memory latency.
@@ -82,7 +84,10 @@ public class InorderPipeline implements IInorderPipeline {
 
     /** Cache homework ctor */
     public InorderPipeline(BranchPredictor bp, ICache ic, ICache dc) {
-        
+        this.branchPredictor = bp;
+        this.insnCache = ic;
+        this.dataCache = dc;
+        this.bypasses = new HashSet<>(Bypass.FULL_BYPASS);
     }
 
     @Override
@@ -93,18 +98,17 @@ public class InorderPipeline implements IInorderPipeline {
     @Override
     public void run(Iterable<Insn> ii) {
         Iterator<Insn> insnIterator = ii.iterator();
-        // change the routine so that the first fetch is free: no prediction
+        // the first fetch is free: no prediction
         if (insnIterator.hasNext()) {
             Insn tmp = insnIterator.next();
             fetchInsn(tmp);
         }
+        print(cycleCounter);
         cycleCounter++;
-        // print(cycleCounter);
-        // end of change
         while (insnIterator.hasNext() || !isEmpty()) {
             advance(insnIterator);
             cycleCounter++;
-            // print(cycleCounter);
+            print(cycleCounter);
         }
     }
 
@@ -145,6 +149,9 @@ public class InorderPipeline implements IInorderPipeline {
     private void fetchInsn(Insn insn) {
         if (DEBUG && insn != null) timingTrace.put(insn, new StringBuilder(String.valueOf(cycleCounter)));
         latches[Stage.FETCH.i()] = insn;
+        if (insn != null) {
+            fetchLatency = insnCache.access(true, insn.pc);
+        }
     }
 
     /**
@@ -166,7 +173,16 @@ public class InorderPipeline implements IInorderPipeline {
 
 
         /* ----------  MEMORY   ---------- */
+//        if (memoryLatency == -1) {
+//            memoryLatency = 0;
+//            memoryLatency += dataCache.access(insn_M.mem == MemoryOp.Load, insn_M.memAddress);
+//        }
+
         int memDelay = checkMemDelay(insn_M);
+        if (memDelay == additionalMemLatency) {
+            currentMemTimer -= dataCache.access(insn_M.mem == MemoryOp.Load, insn_M.memAddress);
+        }
+        System.out.println(memDelay + " !!! " + additionalMemLatency);
         if (memDelay <= 0) {
             currentMemTimer = 0;
             if (getInsn(Stage.WRITEBACK) != null) { throw new IllegalArgumentException(); }
@@ -194,6 +210,10 @@ public class InorderPipeline implements IInorderPipeline {
 
 
         /* ----------   FETCH   ---------- */
+        if (fetchLatency > 0) {
+            fetchLatency--;
+            return;
+        }
         if (getInsn(Stage.DECODE) == null) {
             if (DEBUG && insn_F != null) timingTrace.get(insn_F).append(" " + cycleCounter);
             advance(Stage.FETCH);
@@ -225,9 +245,7 @@ public class InorderPipeline implements IInorderPipeline {
         }
 
     }
-    /**
-     * Fetch next insn, null if will not be correct
-     */
+
     private void fetch(Insn insn_F, Iterator<Insn> iterator) {
         long predNextPC = 0;
         if (insn_F != null) {
@@ -276,7 +294,7 @@ public class InorderPipeline implements IInorderPipeline {
      */
     private int checkMemDelay(Insn mi) {
         if (mi == null || mi.mem == null) return -1;
-        boolean result =  currentMemTimer >= additionalMemLatency;
+        boolean result = currentMemTimer >= additionalMemLatency;
         if (result) return 0;
         int diff = additionalMemLatency - currentMemTimer;
         if (!result) { currentMemTimer++; }

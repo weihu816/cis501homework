@@ -27,7 +27,9 @@ public class Cache implements ICache {
         this.dirtyMissLatency = dirtyMissLatency;
 
         this.sets = new Set[1 << indexBits];
-        Arrays.fill(this.sets, new Set(this.ways));
+        for (int i = 0; i < sets.length; i++) {
+            this.sets[i] = new Set(this.ways);
+        }
     }
 
     @Override

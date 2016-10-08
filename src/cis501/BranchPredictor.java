@@ -19,7 +19,7 @@ public class BranchPredictor {
      * @return the predicted next PC
      */
     public long predict(long pc, long fallthroughPC) {
-        assert 0 == (pc & 0x1) : "lsb of PC should always be 0 for ARM";
+        // TODO assert 0 == (pc & 0x1) : "lsb of PC should always be 0 for ARM";
         final long predictorIndex = pc >> 1;
         long btbTarget = btb.predict(predictorIndex);
         // if it's not a (taken) branch, just predict fallthroughPC
