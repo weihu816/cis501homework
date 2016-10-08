@@ -42,7 +42,7 @@ public class InorderPipeline implements IInorderPipeline {
     /* Five stages herer: F D X M W */
     private Insn[] latches = new Insn[Stage.NUM_STAGES];
     /* Pipeline Parameters */
-    private int additionalMemLatency = 0, currentMemTimer = 0, fetchLatency = 0, memoryLatency = 0;
+    private int additionalMemLatency = 0, memLatency = 0, currentMemTimer = 0, fetchLatency = 0;
     private Set<Bypass> bypasses;
     /* Branch Predictor Parameters */
     private BranchPredictor branchPredictor;
@@ -149,7 +149,7 @@ public class InorderPipeline implements IInorderPipeline {
     private void fetchInsn(Insn insn) {
         if (DEBUG && insn != null) timingTrace.put(insn, new StringBuilder(String.valueOf(cycleCounter)));
         latches[Stage.FETCH.i()] = insn;
-        if (insn != null) {
+        if (insn != null && insnCache != null) {
             fetchLatency = insnCache.access(true, insn.pc);
         }
     }
@@ -173,16 +173,7 @@ public class InorderPipeline implements IInorderPipeline {
 
 
         /* ----------  MEMORY   ---------- */
-//        if (memoryLatency == -1) {
-//            memoryLatency = 0;
-//            memoryLatency += dataCache.access(insn_M.mem == MemoryOp.Load, insn_M.memAddress);
-//        }
-
         int memDelay = checkMemDelay(insn_M);
-        if (memDelay == additionalMemLatency) {
-            currentMemTimer -= dataCache.access(insn_M.mem == MemoryOp.Load, insn_M.memAddress);
-        }
-        System.out.println(memDelay + " !!! " + additionalMemLatency);
         if (memDelay <= 0) {
             currentMemTimer = 0;
             if (getInsn(Stage.WRITEBACK) != null) { throw new IllegalArgumentException(); }
@@ -294,9 +285,13 @@ public class InorderPipeline implements IInorderPipeline {
      */
     private int checkMemDelay(Insn mi) {
         if (mi == null || mi.mem == null) return -1;
-        boolean result = currentMemTimer >= additionalMemLatency;
+        if (currentMemTimer == 0) {
+            memLatency = additionalMemLatency;
+            if (dataCache != null) memLatency += dataCache.access(mi.mem == MemoryOp.Load, mi.memAddress);
+        }
+        boolean result = currentMemTimer >= memLatency;
         if (result) return 0;
-        int diff = additionalMemLatency - currentMemTimer;
+        int diff = memLatency - currentMemTimer;
         if (!result) { currentMemTimer++; }
         return diff;
     }
