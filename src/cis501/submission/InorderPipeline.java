@@ -97,8 +97,6 @@ public class InorderPipeline implements IInorderPipeline {
         if (insnIterator.hasNext()) {
             Insn tmp = insnIterator.next();
             fetchInsn(tmp);
-            // add to the pcInsnRecorder
-            //pcInsnRecorder.put(tmp.pc, tmp);
         }
         cycleCounter++;
         // print(cycleCounter);
@@ -180,50 +178,33 @@ public class InorderPipeline implements IInorderPipeline {
         // Only train at the first time
         if (memDelay == additionalMemLatency || memDelay == -1) { train(insn_X); }
         /* ------------------------------- */
-        if (memDelay > 0) { // There is additional latency
-            if (insn_X != null) {
-                if (memDelay == additionalMemLatency && insn_D == null) {
-                    fetchCorrect(iterator); // This fetched must be correct
-                } else if (memDelay == additionalMemLatency - 1) {
-                    if (DEBUG && insn_F != null) timingTrace.get(insn_F).append(" " + cycleCounter);
-                    advance(Stage.FETCH);
-                    fetch(insn_F, iterator);
-                }
-            } else {
-                if (memDelay == additionalMemLatency && insn_D == null) {
-                    if (DEBUG && insn_F != null) timingTrace.get(insn_F).append(" " + cycleCounter);
-                    advance(Stage.FETCH);
-                    fetch(insn_F, iterator);
-                } else if (memDelay == additionalMemLatency - 1 && insn_D != null) {
-                    if (DEBUG && insn_D != null) timingTrace.get(insn_D).append(" " + cycleCounter);
-                    advance(Stage.DECODE);
-                    advance(Stage.FETCH);
-                    fetch(insn_F, iterator);
-                }
-            }
-            return; // End of the case with additional latency
+        if (getInsn(Stage.MEMORY) == null) {
+            if (DEBUG && insn_X != null) timingTrace.get(insn_X).append(" " + cycleCounter);
+            advance(Stage.EXECUTE);
         }
-        /* ------------------------------- */
-        if (getInsn(Stage.MEMORY) != null) { throw new IllegalArgumentException(); }
-        if (DEBUG && insn_X != null) timingTrace.get(insn_X).append(" " + cycleCounter);
-        advance(Stage.EXECUTE);
 
 
         /* ----------   DECODE  ---------- */
-        if (getInsn(Stage.EXECUTE) != null) { throw new IllegalArgumentException(); }
-        if (stallOnD(insn_D, insn_X, insn_M)) { return; }
+        if (stallOnD(insn_D, insn_X, insn_M, memDelay)) { return; }
         /* ------------------------------- */
-        if (DEBUG && insn_D != null) timingTrace.get(insn_D).append(" " + cycleCounter);
-        advance(Stage.DECODE);
+        if (getInsn(Stage.EXECUTE) == null) {
+            if (DEBUG && insn_D != null) timingTrace.get(insn_D).append(" " + cycleCounter);
+            advance(Stage.DECODE);
+        }
 
 
         /* ----------   FETCH   ---------- */
-        if (getInsn(Stage.DECODE) != null) { throw new IllegalArgumentException(); }
-        if (DEBUG && insn_F != null) timingTrace.get(insn_F).append(" " + cycleCounter);
-        advance(Stage.FETCH);
-        if (insn_F == null && insn_D != null) { fetchInsn(null); }
-        else if (insn_F == null && insn_D == null) { fetchCorrect(iterator); }
-        else { fetch(insn_F, iterator); }
+        if (getInsn(Stage.DECODE) == null) {
+            if (DEBUG && insn_F != null) timingTrace.get(insn_F).append(" " + cycleCounter);
+            advance(Stage.FETCH);
+        }
+        if (insn_F == null && insn_D == null) {
+            fetchCorrect(iterator);
+        } else if (insn_F == null && insn_D != null) {
+            fetchInsn(null);
+        } else {
+            fetch(insn_F, iterator);
+        }
     }
 
     /**
@@ -302,9 +283,9 @@ public class InorderPipeline implements IInorderPipeline {
         return diff;
     }
 
-    private boolean stallOnD(Insn di, Insn xi, Insn mi) {
+    private boolean stallOnD(Insn di, Insn xi, Insn mi, int memDelay) {
         if (di == null) return false;
-        if (stallOnLoadToUseDependence(di, xi)) {
+        if (stallOnLoadToUseDependence(di, xi) || (stallOnLoadToUseDependence(di, mi) && memDelay > 0)) {
             if (DEBUG) timingTrace.get(di).append(" {load-use}");
             return true;
         }
@@ -335,7 +316,7 @@ public class InorderPipeline implements IInorderPipeline {
         }
 
         if (mi != null) {
-            if (mi.mem != null) { // X is Load/Store
+            if (mi.mem != null) { // M is Load/Store
                 if (di.mem != null) { // D is MEM
                     // Store => Load
                     if (di.mem == MemoryOp.Store && mi.mem == MemoryOp.Load) {
@@ -347,7 +328,7 @@ public class InorderPipeline implements IInorderPipeline {
                     if (mi.mem == MemoryOp.Load && !bypasses.contains(Bypass.WX)) return true;
                 }
             } else {
-                // X is ADD
+                // M is ADD
                 if ((mi.dstReg != -1) && (di.srcReg1 == mi.dstReg || di.srcReg2 == mi.dstReg)) {
                     if (di.mem != null) { // D is Load/Store
                         if (di.mem == MemoryOp.Load) {
