@@ -32,9 +32,9 @@ public class Cache implements ICache {
 
     @Override
     public int access(boolean load, long address) {
+        int offset = getOffset(address);
         int index = getIndex(address);
         String tag = getTag(address);
-        long offset = getOffset(address);
         Set set = sets[index % sets.length];
         if (set.hit(load, tag, offset)) {
             return hitLatency;
@@ -43,12 +43,12 @@ public class Cache implements ICache {
         } else if (set.dirtyMiss(load, tag, offset)) {
             return dirtyMissLatency;
         }
-        return 0;
+        throw new IllegalArgumentException();
     }
 
 
-    private long getOffset(long address) {
-        return address & ((1 << blockOffsetBits) - 1);
+    private int getOffset(long address) {
+        return new Long(address & ((1 << blockOffsetBits) - 1)).intValue();
     }
 
     private int getIndex(long address) {
@@ -64,13 +64,16 @@ public class Cache implements ICache {
 
     class Set {
         private Line[] lines;
-        private int size = 0;
+        private int next = 0; // next position
 
         public Set(int ways) {
             this.lines = new Line[ways];
+            for (int i = 0; i < this.lines.length; i++) {
+                lines[i] = new Line(i);
+            }
         }
 
-        public boolean hit(boolean load, String tag, long offset) {
+        public boolean hit(boolean load, String tag, int offset) {
             for (Line line : lines) {
                 if (line.valid && line.tag.equals(tag)) {
                     if (!load) line.dirty = true;
@@ -81,21 +84,41 @@ public class Cache implements ICache {
         }
 
         // Call cleanMiss after hit
-        public boolean cleanMiss(boolean load, String tag, long offset) {
-
-            return false;
-        }
-
-        // Call dirtyMiss after cleanMiss
-        public boolean dirtyMiss(boolean load, String tag, long offset) {
+        public boolean cleanMiss(boolean load, String tag, int offset) {
+            Line replaceLine = lines[next];
+            if (replaceLine.dirty) return false;
+            replace(replaceLine, load, tag);
             return true;
         }
 
+        // Call dirtyMiss after cleanMiss
+        public boolean dirtyMiss(boolean load, String tag, int offset) {
+            Line replaceLine = lines[next];
+            // Writeback to the memory ......
+            replace(replaceLine, load, tag);
+            return true;
+        }
+
+        private void replace(Line replaceLine, boolean load, String tag) {
+            int prevLRU = replaceLine.LRU;
+            replaceLine.valid = true;
+            replaceLine.dirty = !load;
+            replaceLine.tag = tag;
+            replaceLine.LRU = lines.length - 1;
+            for (int i = 0; i < lines.length; i++) {
+                if (lines[i].LRU > prevLRU) { lines[i].LRU--; }
+                if (lines[i].LRU == 0) next = i;
+            }
+        }
+
         class Line {
-            private String tag;
-            private boolean valid = false;
-            private boolean dirty = false;
-            private int LRUBit = 0;
+            String tag;
+            boolean valid = false;
+            boolean dirty = false;
+            int LRU = 0;
+            public Line(int LRU) {
+                this.LRU = LRU;
+            }
         }
     }
 }
