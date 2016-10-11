@@ -79,6 +79,7 @@ public class Cache implements ICache {
             for (Line line : lines) {
                 if (line.valid && line.tag.equals(tag)) {
                     if (!load) line.dirty = true;
+                    updateLRU(line);
                     return true;
                 }
             }
@@ -106,7 +107,12 @@ public class Cache implements ICache {
             replaceLine.valid = true;
             replaceLine.dirty = !load;
             replaceLine.tag = tag;
-            replaceLine.LRU = lines.length - 1;
+            updateLRU(replaceLine);
+        }
+
+        private void updateLRU(Line line) {
+            int prevLRU = line.LRU;
+            line.LRU = lines.length - 1;
             for (int i = 0; i < lines.length; i++) {
                 if (lines[i].LRU > prevLRU) { lines[i].LRU--; }
                 if (lines[i].LRU == 0) next = i;
