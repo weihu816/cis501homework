@@ -4,7 +4,7 @@ import cis501.IBranchTargetBuffer;
 public class BranchTargetBuffer implements IBranchTargetBuffer {
 
     private int indexBitM;
-    private BTBEntry[] bTBTable; // use a hashtable as BTBTable to avoid initializing empty entry
+    private BTBEntry[] bTBTable;
 
     public BranchTargetBuffer(int indexBits) {
         if(indexBits >= 32) {

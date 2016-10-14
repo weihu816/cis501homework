@@ -27,6 +27,8 @@ public class Insn {
 
     public final String asm;
 
+    public boolean isFake = false;
+
     public long fallthroughPC() {
         return this.pc + this.insnSizeBytes;
     }
@@ -139,6 +141,23 @@ public class Insn {
         this.memAddress = memAddr;
         this.memAccessBytes = (short) msize;
         this.asm = asm;
+    }
+
+    /** Create a fake insn to be used in pipeline. */
+    public Insn(long pc){
+        this.pc = pc;
+        this.dstReg = 0;
+        this.srcReg1 = 0;
+        this.srcReg2 = 0;
+        this.insnSizeBytes = 0;
+        this.branch = null;
+        this.branchTarget = 0;
+        this.condCode = null;
+        this.mem = null;
+        this.memAddress = 0;
+        this.memAccessBytes = 0;
+        this.asm = null;
+        this.isFake = true;
     }
 
     @Override

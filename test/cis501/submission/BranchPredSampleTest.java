@@ -266,7 +266,7 @@ public class BranchPredSampleTest {
 
     @Test
     public void runBimodalFull() {
-        for(int i = 4; i < 19; i++) {
+        for(int i = 1; i < 2; i++) {
             final IDirectionPredictor bimodal = new DirPredBimodal(i);
             final IBranchTargetBuffer bigBtb = new BranchTargetBuffer(i);
             InsnIterator uiter = new InsnIterator(TRACE_FILE, -1);
@@ -279,14 +279,29 @@ public class BranchPredSampleTest {
 
     @Test
     public void runGshareFull() {
-        for(int i = 4; i < 19; i++) {
+        for(int i = 1; i < 2; i++) {
             final IDirectionPredictor gshare = new DirPredGshare(i, i);
             final IBranchTargetBuffer bigBtb = new BranchTargetBuffer(i);
             InsnIterator uiter = new InsnIterator(TRACE_FILE, -1);
             IInorderPipeline pl = new InorderPipeline(1, new BranchPredictor(gshare, bigBtb));
             pl.run(uiter);
-            System.out.println("Gshare \n insn: " + pl.getInsns() + " cycles: " + pl.getCycles());
-            System.out.println("--- counters: " + i + "   IPC:" + pl.getCycles()*1.0/pl.getCycles());
+            System.out.println("Gshare \n insn: --- counters: " + i + "   "+ pl.getInsns() + " cycles: " + pl.getCycles());
+            System.out.println("   IPC:" + ((double) pl.getCycles()) /pl.getCycles());
+        }
+    }
+
+    @Test
+    public void runHybridFull() {
+        for(int i = 4; i < 19; i++) {
+            final IDirectionPredictor gshare = new DirPredGshare(i-1, i-1);
+            final IDirectionPredictor bimodal = new DirPredBimodal(i-2);
+            final IDirectionPredictor tournament = new DirPredTournament(i-2,gshare,bimodal);
+            final IBranchTargetBuffer bigBtb = new BranchTargetBuffer(i);
+            InsnIterator uiter = new InsnIterator(TRACE_FILE, -1);
+            IInorderPipeline pl = new InorderPipeline(1, new BranchPredictor(tournament, bigBtb));
+            pl.run(uiter);
+            System.out.println("To \n insn: --- counters: " + i + "   "+ pl.getInsns() + " cycles: " + pl.getCycles());
+            System.out.println("   IPC:" + ((double) pl.getCycles()) /pl.getCycles());
         }
     }
 }

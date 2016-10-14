@@ -189,6 +189,11 @@ public class InorderPipeline implements IInorderPipeline {
             if (DEBUG && insn_X != null) timingTrace.get(insn_X).append(" " + cycleCounter);
             advance(Stage.EXECUTE);
         }
+        // Also do flush the next two stages if needed (there are fake Insn not null now)
+        if (getInsn(Stage.FETCH).isFake) {
+            clear(Stage.DECODE);
+            clear(Stage.FETCH);
+        }
 
 
         /* ----------   DECODE  ---------- */
@@ -211,9 +216,7 @@ public class InorderPipeline implements IInorderPipeline {
         }
         if (insn_F == null && insn_D == null) {
             fetchCorrect(iterator);
-        } else if (insn_F == null && insn_D != null) {
-            fetchInsn(null);
-        } else {
+        }else {
             fetch(insn_F, iterator);
         }
     }
@@ -222,12 +225,12 @@ public class InorderPipeline implements IInorderPipeline {
      * Train the predictor at the X stage
      */
     private void train(Insn insn_X) {
-        if (insn_X != null) { //  ececute has an insn
+        if (insn_X != null) {
             insnCounter++;
             if(insn_X.branch == Direction.Taken) { // is a branch and is taken
                 long nextPC_X = insn_X.branchTarget;
                 branchPredictor.train(insn_X.pc, nextPC_X, Direction.Taken);
-            } else { // is not a branch or is not taken
+            } else {
                 long nextPC_X = insn_X.fallthroughPC();
                 if (insn_X.branch!= null) { // train only if it's a branch insn
                     branchPredictor.train(insn_X.pc, nextPC_X, Direction.NotTaken);
@@ -237,24 +240,35 @@ public class InorderPipeline implements IInorderPipeline {
 
     }
 
+    /**
+     * fetch the next insn if last fetch was valid (right prediction)
+     *  or if unkonwn yet
+     * @param insn_F
+     * @param iterator
+     */
     private void fetch(Insn insn_F, Iterator<Insn> iterator) {
         long predNextPC = 0;
         if (insn_F != null) {
             predNextPC = branchPredictor.predict(insn_F.pc, insn_F.fallthroughPC());
         }
-        Insn nextIns = null;
-        if (iterator.hasNext()) {
-            nextIns = iterator.next();
+        if (!insn_F.isFake && iterator.hasNext()) { // known last one is not fake, do forward iterator
+            Insn nextIns = iterator.next();
+            if (predNextPC == nextIns.pc) { // made right prediction
+                fetchInsn(nextIns);
+                return;
+            } else {
+                if (DEBUG && insn_F != null) timingTrace.get(insn_F).append(" " + "{bmispred}");
+                queue.offer(nextIns);
+            }
         }
-        if (nextIns != null && predNextPC == nextIns.pc) {
-            fetchInsn(nextIns);
-        } else {
-            if (DEBUG && insn_F != null) timingTrace.get(insn_F).append(" " + "{bmispred}");
-            queue.offer(nextIns);
-            fetchInsn(null);
-        }
+        fetchInsn(new Insn(predNextPC));
     }
 
+    /**
+     * fetch the correct insn after made wrong prediction
+     *  and have been penalized
+     * @param iterator
+     */
     private void fetchCorrect(Iterator<Insn> iterator) {
         Insn nextIns = null;
         if (queue.isEmpty()) {
