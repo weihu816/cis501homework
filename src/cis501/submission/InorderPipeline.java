@@ -103,8 +103,8 @@ public class InorderPipeline implements IInorderPipeline {
             Insn tmp = insnIterator.next();
             fetchInsn(tmp);
         }
-        // print(cycleCounter);
         cycleCounter++;
+        // print(cycleCounter);
         while (insnIterator.hasNext() || !isEmpty()) {
             advance(insnIterator);
             cycleCounter++;
@@ -250,9 +250,9 @@ public class InorderPipeline implements IInorderPipeline {
             if (DEBUG && insn_F != null) timingTrace.get(insn_F).append(" {bmispred}");
             queue.offer(nextIns);
             // TODO: Hit insn cache for mispredicted branch
-            if (insnCache != null && predNextPC != 0) {
-                fetchLatency = insnCache.access(true, predNextPC);
-            }
+//            if (insnCache != null && predNextPC != 0) {
+//                fetchLatency = insnCache.access(true, predNextPC);
+//            }
             fetchInsn(null);
         }
     }
