@@ -151,7 +151,7 @@ public class CacheSampleTest {
     @Test
     public void test2Imiss() {
         List<Insn> insns = new LinkedList<>();
-        insns.add(makeInt(1, 2, 3, 0, 4));
+        insns.add(makeInt(1, 2, 3, 0x0, 4));
         insns.add(makeInt(1, 2, 3, BLOCK_SIZE, 4));
         pipe.run(insns);
 
@@ -165,8 +165,8 @@ public class CacheSampleTest {
     @Test
     public void testImissIhit() {
         List<Insn> insns = new LinkedList<>();
-        insns.add(makeInt(1, 2, 3, 0, 1));
-        insns.add(makeInt(1, 2, 3, 1, 1));
+        insns.add(makeInt(1, 2, 3, 0x0, 4));
+        insns.add(makeInt(1, 2, 3, 0x4, 4));
         pipe.run(insns);
 
         assertEquals(2, pipe.getInsns());
@@ -196,7 +196,7 @@ public class CacheSampleTest {
     @Test
     public void testImissDmiss() {
         List<Insn> insns = new LinkedList<>();
-        insns.add(makeMem(1, 2, 3, 0, 4, MemoryOp.Load, 0xB));
+        insns.add(makeMem(1, 2, 3, 0x0, 4, MemoryOp.Load, 0xB));
         pipe.run(insns);
 
         assertEquals(1, pipe.getInsns());
