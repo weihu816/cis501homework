@@ -165,8 +165,8 @@ public class CacheSampleTest {
     @Test
     public void testImissIhit() {
         List<Insn> insns = new LinkedList<>();
-        insns.add(makeInt(1, 2, 3, 0x0, 4));
-        insns.add(makeInt(1, 2, 3, 0x4, 4));
+        insns.add(makeInt(1, 2, 3, 0x0, 2));
+        insns.add(makeInt(1, 2, 3, 0x2, 2));
         pipe.run(insns);
 
         assertEquals(2, pipe.getInsns());
