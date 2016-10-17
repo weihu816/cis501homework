@@ -37,7 +37,7 @@ enum Stage {
 
 public class InorderPipeline implements IInorderPipeline {
 
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
     // ----------------------------------------------------------------------
     /* Five stages herer: F D X M W */
     private Insn[] latches = new Insn[Stage.NUM_STAGES];
@@ -103,12 +103,12 @@ public class InorderPipeline implements IInorderPipeline {
             Insn tmp = insnIterator.next();
             fetchInsn(tmp);
         }
-        print(cycleCounter);
+        // print(cycleCounter);
         cycleCounter++;
         while (insnIterator.hasNext() || !isEmpty()) {
             advance(insnIterator);
             cycleCounter++;
-            print(cycleCounter);
+            // print(cycleCounter);
         }
     }
 
@@ -151,6 +151,7 @@ public class InorderPipeline implements IInorderPipeline {
         latches[Stage.FETCH.i()] = insn;
         if (insn != null && insnCache != null) {
             fetchLatency = insnCache.access(true, insn.pc);
+            if (fetchLatency > 0) timingTrace.get(insn).append(" {i$miss}");
         }
     }
 
@@ -167,7 +168,6 @@ public class InorderPipeline implements IInorderPipeline {
         final Insn insn_F = getInsn(Stage.FETCH);
 
         /* ---------- WRITEBACK ---------- */
-
         if (DEBUG && insn_W != null) { cleanAndPrintStageTimes(insn_W); }
         advance(Stage.WRITEBACK);
 
@@ -176,14 +176,14 @@ public class InorderPipeline implements IInorderPipeline {
         int memDelay = checkMemDelay(insn_M);
         if (memDelay <= 0) {
             currentMemTimer = 0;
-            if (getInsn(Stage.WRITEBACK) != null) { throw new IllegalArgumentException(); }
+            assert getInsn(Stage.WRITEBACK) == null;
             if (DEBUG && insn_M != null) timingTrace.get(insn_M).append(" " + cycleCounter);
             advance(Stage.MEMORY);
         }
 
         /* ----------  EXECUTE  ---------- */
         // Only train at the first time
-        if (memDelay == additionalMemLatency || memDelay == -1) { train(insn_X); }
+        if (memDelay == -1 || memDelay == memLatency) { train(insn_X); }
         /* ------------------------------- */
         if (getInsn(Stage.MEMORY) == null) {
             if (DEBUG && insn_X != null) timingTrace.get(insn_X).append(" " + cycleCounter);
@@ -192,9 +192,7 @@ public class InorderPipeline implements IInorderPipeline {
 
 
         /* ----------   DECODE  ---------- */
-        if (stallOnD(insn_D, insn_X, insn_M, memDelay)) { return; }
-        /* ------------------------------- */
-        if (getInsn(Stage.EXECUTE) == null) {
+        if (!stallOnD(insn_D, insn_X, insn_M, memDelay) && getInsn(Stage.EXECUTE) == null) {
             if (DEBUG && insn_D != null) timingTrace.get(insn_D).append(" " + cycleCounter);
             advance(Stage.DECODE);
         }
@@ -202,6 +200,7 @@ public class InorderPipeline implements IInorderPipeline {
 
         /* ----------   FETCH   ---------- */
         if (fetchLatency > 0) {
+            // TODO: NULL can be invalid bubble - no assert getInsn(Stage.FETCH) != null;
             fetchLatency--;
             return;
         }
@@ -213,7 +212,7 @@ public class InorderPipeline implements IInorderPipeline {
             fetchCorrect(iterator);
         } else if (insn_F == null && insn_D != null) {
             fetchInsn(null);
-        } else {
+        } else if (getInsn(Stage.FETCH) == null) {
             fetch(insn_F, iterator);
         }
     }
@@ -234,7 +233,6 @@ public class InorderPipeline implements IInorderPipeline {
                 }
             }
         }
-
     }
 
     private void fetch(Insn insn_F, Iterator<Insn> iterator) {
@@ -249,8 +247,12 @@ public class InorderPipeline implements IInorderPipeline {
         if (nextIns != null && predNextPC == nextIns.pc) {
             fetchInsn(nextIns);
         } else {
-            if (DEBUG && insn_F != null) timingTrace.get(insn_F).append(" " + "{bmispred}");
+            if (DEBUG && insn_F != null) timingTrace.get(insn_F).append(" {bmispred}");
             queue.offer(nextIns);
+            // TODO: Hit insn cache for mispredicted branch
+            if (insnCache != null && predNextPC != 0) {
+                fetchLatency = insnCache.access(true, predNextPC);
+            }
             fetchInsn(null);
         }
     }
@@ -287,7 +289,11 @@ public class InorderPipeline implements IInorderPipeline {
         if (mi == null || mi.mem == null) return -1;
         if (currentMemTimer == 0) {
             memLatency = additionalMemLatency;
-            if (dataCache != null) memLatency += dataCache.access(mi.mem == MemoryOp.Load, mi.memAddress);
+            if (dataCache != null) {
+                int dataLatency = dataCache.access(mi.mem == MemoryOp.Load, mi.memAddress);
+                memLatency += dataLatency;
+                if (dataLatency > 0) timingTrace.get(mi).append(" {d$miss}");
+            }
         }
         boolean result = currentMemTimer >= memLatency;
         if (result) return 0;
@@ -368,7 +374,7 @@ public class InorderPipeline implements IInorderPipeline {
     private void cleanAndPrintStageTimes(Insn insn_W) {
         String temp = timingTrace.get(insn_W).toString();
         StringBuilder sb = new StringBuilder();
-        boolean isMisPred = false, isLoadUse = false;
+        boolean isMisPred = false, isLoadUse = false, isIMiss = false, isDMiss = false;
         if (temp.contains(" {bmispred}")) {
             isMisPred = true;
             temp = temp.replace(" {bmispred}", "");
@@ -377,11 +383,24 @@ public class InorderPipeline implements IInorderPipeline {
             isLoadUse = true;
             temp = temp.replace(" {load-use}", "");
         }
+        if (temp.contains(" {i$miss}")) {
+            isIMiss = true;
+            temp = temp.replace(" {i$miss}", "");
+        }
+        if (temp.contains(" {d$miss}")) {
+            isDMiss = true;
+            temp = temp.replace(" {d$miss}", "");
+        }
         sb.append(temp + " " + insn_W.asm);
-        if (isMisPred && isLoadUse) sb.append(" {load-use, bmispred}");
-        else if (isMisPred) sb.append(" {bmispred}");
-        else if (isLoadUse) sb.append(" {load-use}");
-        else sb.append(" {}");
+        sb.append(" {");
+        if (isLoadUse) sb.append("load-use, ");
+        if (isMisPred) sb.append("bmispred, ");
+        if (isIMiss) sb.append("i$miss, ");
+        if (isDMiss) sb.append("d$miss, ");
+        if (sb.charAt(sb.length()-2) == ',') {
+            sb.delete(sb.length()-2, sb.length());
+        }
+        sb.append("}");
         System.out.println(sb.toString());
         timingTrace.remove(insn_W);
     }

@@ -11,6 +11,9 @@ import static org.junit.Assert.assertEquals;
 
 public class CacheSampleTest {
 
+    // TODO: replace the path of trace file here
+    private static final String TRACE_FILE = System.getProperty("trace");
+
     private static final int HIT_LAT = 0;
     private static final int CLEAN_MISS_LAT = 2;
     private static final int DIRTY_MISS_LAT = 3;
@@ -231,6 +234,18 @@ public class CacheSampleTest {
         // f..dxmw     |
         //      f..dxmw|
         assertEquals(7 + (2 * CLEAN_MISS_LAT) + 2/*br mispred*/, pipe.getCycles());
+    }
+
+    // More tests
+    @Test
+    public void test5k() {
+        final IDirectionPredictor never = new DirPredBimodal(10);
+        final IBranchTargetBuffer bigBtb = new BranchTargetBuffer(10);
+        final ICache ic = new Cache(10, 1, 2, 0, 2, 3), dc = new Cache(10, 1, 2, 0, 2 ,3);
+        InsnIterator uiter = new InsnIterator(TRACE_FILE, 5000);
+        IInorderPipeline pl = new InorderPipeline(new BranchPredictor(never, bigBtb), ic, dc);
+        pl.run(uiter);
+        System.out.println("5000 Gshare \n insn: " + pl.getInsns() + " cycles: " + pl.getCycles());
     }
 
 }
