@@ -238,10 +238,12 @@ public class CacheSampleTest {
 
     // More tests
     @Test
-    public void test5k() {
+    public void test5k1() {
         final IDirectionPredictor never = new DirPredBimodal(10);
+//        final IDirectionPredictor never = new DirPredNeverTaken();
         final IBranchTargetBuffer bigBtb = new BranchTargetBuffer(10);
         final ICache ic = new Cache(10, 1, 2, 0, 2, 3), dc = new Cache(10, 1, 2, 0, 2 ,3);
+//        final ICache ic = new Cache(10, 2, 2, 0, 2, 3), dc = new Cache(10, 2, 2, 0, 2 ,3);
         InsnIterator uiter = new InsnIterator(TRACE_FILE, 5000);
         IInorderPipeline pl = new InorderPipeline(new BranchPredictor(never, bigBtb), ic, dc);
         pl.run(uiter);

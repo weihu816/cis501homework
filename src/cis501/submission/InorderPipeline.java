@@ -37,7 +37,7 @@ enum Stage {
 
 public class InorderPipeline implements IInorderPipeline {
 
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     // ----------------------------------------------------------------------
     /* Five stages herer: F D X M W */
     private Insn[] latches = new Insn[Stage.NUM_STAGES];
@@ -53,6 +53,7 @@ public class InorderPipeline implements IInorderPipeline {
     private Queue<Insn> queue = new LinkedList<>();
     /* Cache */
     private ICache insnCache, dataCache;
+    Insn pre = null;
 
     /**
      * Create a new pipeline with the given additional memory latency.
@@ -151,7 +152,7 @@ public class InorderPipeline implements IInorderPipeline {
         latches[Stage.FETCH.i()] = insn;
         if (insn != null && insnCache != null) {
             fetchLatency = insnCache.access(true, insn.pc);
-            if (fetchLatency > 0) timingTrace.get(insn).append(" {i$miss}");
+            if (DEBUG && fetchLatency > 0) timingTrace.get(insn).append(" {i$miss}");
         }
     }
 
@@ -179,11 +180,21 @@ public class InorderPipeline implements IInorderPipeline {
             assert getInsn(Stage.WRITEBACK) == null;
             if (DEBUG && insn_M != null) timingTrace.get(insn_M).append(" " + cycleCounter);
             advance(Stage.MEMORY);
+            train(insn_X);
         }
 
         /* ----------  EXECUTE  ---------- */
         // Only train at the first time
-        if (memDelay == -1 || memDelay == memLatency) { train(insn_X); }
+        if (memDelay == -1) { assert getInsn(Stage.MEMORY) == null; }
+        if (insn_X != null && insn_X != pre) { // First apprerance
+            pre = insn_X;
+            if (!(memDelay == -1 || memDelay == memLatency)) {
+                System.out.println(memDelay + " " + memLatency);
+                System.out.println(insn_X);
+            }
+//            train(insn_X);
+        }
+//         if (memDelay == -1 || memDelay == memLatency) { train(insn_X); }
         /* ------------------------------- */
         if (getInsn(Stage.MEMORY) == null) {
             if (DEBUG && insn_X != null) timingTrace.get(insn_X).append(" " + cycleCounter);
@@ -221,7 +232,7 @@ public class InorderPipeline implements IInorderPipeline {
      * Train the predictor at the X stage
      */
     private void train(Insn insn_X) {
-        if (insn_X != null) { //  ececute has an insn
+        if (insn_X != null) {
             insnCounter++;
             if(insn_X.branch == Direction.Taken) { // is a branch and is taken
                 long nextPC_X = insn_X.branchTarget;
@@ -249,10 +260,6 @@ public class InorderPipeline implements IInorderPipeline {
         } else {
             if (DEBUG && insn_F != null) timingTrace.get(insn_F).append(" {bmispred}");
             queue.offer(nextIns);
-            // TODO: Hit insn cache for mispredicted branch
-//            if (insnCache != null && predNextPC != 0) {
-//                fetchLatency = insnCache.access(true, predNextPC);
-//            }
             fetchInsn(null);
         }
     }
@@ -291,14 +298,14 @@ public class InorderPipeline implements IInorderPipeline {
             memLatency = additionalMemLatency;
             if (dataCache != null) {
                 int dataLatency = dataCache.access(mi.mem == MemoryOp.Load, mi.memAddress);
+                assert dataLatency >= 0;
                 memLatency += dataLatency;
-                if (dataLatency > 0) timingTrace.get(mi).append(" {d$miss}");
+                if (DEBUG && dataLatency > 0) timingTrace.get(mi).append(" {d$miss}");
             }
         }
-        boolean result = currentMemTimer >= memLatency;
-        if (result) return 0;
+        assert currentMemTimer <= memLatency;
         int diff = memLatency - currentMemTimer;
-        if (!result) { currentMemTimer++; }
+        currentMemTimer++;
         return diff;
     }
 
