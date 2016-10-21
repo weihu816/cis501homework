@@ -238,7 +238,7 @@ public class CacheSampleTest {
 
     // More tests
     @Test
-    public void test5k1() {
+    public void test5k() {
         if (TRACE_FILE == null) return;
         final IDirectionPredictor never = new DirPredBimodal(10);
         final IBranchTargetBuffer bigBtb = new BranchTargetBuffer(10);
@@ -247,6 +247,26 @@ public class CacheSampleTest {
         IInorderPipeline pl = new InorderPipeline(new BranchPredictor(never, bigBtb), ic, dc);
         pl.run(uiter);
         System.out.println("5000 Gshare \n insn: " + pl.getInsns() + " cycles: " + pl.getCycles());
+    }
+
+    @Test
+    public void testGraph() {
+        if (TRACE_FILE == null) return;
+        int[] ways = {1,2,4,8,16};
+        int[] sizes = {9,10,11,12,13,14,15,16,17,18};
+        for (int size : sizes) {
+            for (int i = 0; i < ways.length; i++) {
+                int way = ways[i];
+                int bit = size-5-i;
+                final IDirectionPredictor bp = new DirPredGshare(18, 18);
+                final IBranchTargetBuffer bigBtb = new BranchTargetBuffer(18);
+                final ICache ic = new Cache(bit, way, 5, 0, 2, 3), dc = new Cache(bit, way, 5, 0, 2 ,3);
+                InsnIterator uiter = new InsnIterator(TRACE_FILE, 5000);
+                IInorderPipeline pl = new InorderPipeline(new BranchPredictor(bp, bigBtb), ic, dc);
+                pl.run(uiter);
+                System.out.println("size: " + size + " ways: " + way + " cycles: " + pl.getCycles());
+            }
+        }
     }
 
 }
