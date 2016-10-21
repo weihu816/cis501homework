@@ -184,23 +184,10 @@ public class InorderPipeline implements IInorderPipeline {
         }
 
         /* ----------  EXECUTE  ---------- */
-        // Only train at the first time
-        if (memDelay == -1) { assert getInsn(Stage.MEMORY) == null; }
-        if (insn_X != null && insn_X != pre) { // First apprerance
-            pre = insn_X;
-            if (!(memDelay == -1 || memDelay == memLatency)) {
-                System.out.println(memDelay + " " + memLatency);
-                System.out.println(insn_X);
-            }
-//            train(insn_X);
-        }
-//         if (memDelay == -1 || memDelay == memLatency) { train(insn_X); }
-        /* ------------------------------- */
         if (getInsn(Stage.MEMORY) == null) {
             if (DEBUG && insn_X != null) timingTrace.get(insn_X).append(" " + cycleCounter);
             advance(Stage.EXECUTE);
         }
-
 
         /* ----------   DECODE  ---------- */
         if (!stallOnD(insn_D, insn_X, insn_M, memDelay) && getInsn(Stage.EXECUTE) == null) {
