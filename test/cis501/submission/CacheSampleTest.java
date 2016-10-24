@@ -139,7 +139,7 @@ public class CacheSampleTest {
     @Test
     public void testImiss() {
         List<Insn> insns = new LinkedList<>();
-        insns.add(makeInt(1, 2, 3, 0xAB, 4));
+        insns.add(makeInt(1, 2, 3, 0xAA, 4));
         pipe.run(insns);
 
         assertEquals(1, pipe.getInsns());
