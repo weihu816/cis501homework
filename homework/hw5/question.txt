@@ -1,0 +1,3 @@
+Your graph should show that all the caches have basically the same performance at large cache sizes. Why does this convergence occur?
+
+As the casche size increases, the chance of a cache miss decreases and eventually all insn/data will reside in the cache and there will be no eviction. That's why the convergence occur.

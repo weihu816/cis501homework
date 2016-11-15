@@ -237,6 +237,61 @@ public class CacheSampleTest {
     }
 
     // More tests
+    // private static Insn makeMem(int src1, int src2, int dst, long pc, int isize, MemoryOp mop, long dataAddr) {
+    @Test
+    public void testFail1() {
+        List<Insn> insns = new LinkedList<>();
+        insns.add(makeMem(1, 2, 3, 0x0, 0, MemoryOp.Load, 0x0));
+        insns.add(makeMem(1, 2, 3, 0x0, 0, MemoryOp.Store, 0x0));
+        insns.add(makeMem(1, 2, 3, 0x0, 0, MemoryOp.Store, 0x10));
+        insns.add(makeMem(1, 2, 3, 0x0, 0, MemoryOp.Store, 0x20));
+        insns.add(makeMem(1, 2, 3, 0x0, 1, MemoryOp.Store, 0x0));
+        pipe.run(insns);
+        assertEquals(5, pipe.getInsns());
+        assertEquals(22, pipe.getCycles());
+    }
+
+    @Test
+    public void testFail2() {
+        List<Insn> insns = new LinkedList<>();
+        insns.add(makeMem(1, 2, 3, 0x0, 1, MemoryOp.Store, 0x0));
+        insns.add(makeMem(1, 2, 3, 0x0, 1, MemoryOp.Store, 0x10));
+        insns.add(makeMem(1, 2, 3, 0x0, 1, MemoryOp.Store, 0x20));
+        insns.add(makeMem(1, 2, 3, 0x0, 1, MemoryOp.Store, 0x0));
+        pipe.run(insns);
+        assertEquals(4, pipe.getInsns());
+        assertEquals(21, pipe.getCycles());
+    }
+
+    @Test
+    public void testFail3() {
+        List<Insn> insns = new LinkedList<>();
+        insns.add(makeMem(1, 2, 3, 0x0, 0, MemoryOp.Load, 0x0));
+        insns.add(makeMem(1, 2, 3, 0x0, 0, MemoryOp.Store, 0x0));
+        insns.add(makeMem(1, 2, 3, 0x0, 0, MemoryOp.Store, 0x10));
+        insns.add(makeMem(1, 2, 3, 0x0, 0, MemoryOp.Store, 0x20));
+        insns.add(makeMem(1, 2, 3, 0x0, 0, MemoryOp.Store, 0x30));
+        insns.add(makeMem(1, 2, 3, 0x0, 0, MemoryOp.Store, 0x40));
+        insns.add(makeMem(1, 2, 3, 0x0, 1, MemoryOp.Store, 0x0));
+        pipe.run(insns);
+        assertEquals(7, pipe.getInsns());
+        assertEquals(28, pipe.getCycles());
+    }
+
+    @Test
+    public void testFail4() {
+        List<Insn> insns = new LinkedList<>();
+        insns.add(makeMem(1, 2, 3, 0x0, 1, MemoryOp.Store, 0x0));
+        insns.add(makeMem(1, 2, 3, 0x0, 1, MemoryOp.Store, 0x10));
+        insns.add(makeMem(1, 2, 3, 0x0, 1, MemoryOp.Store, 0x20));
+        insns.add(makeMem(1, 2, 3, 0x0, 1, MemoryOp.Store, 0x30));
+        insns.add(makeMem(1, 2, 3, 0x0, 1, MemoryOp.Store, 0x40));
+        insns.add(makeMem(1, 2, 3, 0x0, 1, MemoryOp.Store, 0x0));
+        pipe.run(insns);
+        assertEquals(6, pipe.getInsns());
+        assertEquals(27, pipe.getCycles());
+    }
+
     @Test
     public void test5k() {
         if (TRACE_FILE == null) return;
@@ -264,7 +319,7 @@ public class CacheSampleTest {
                 InsnIterator uiter = new InsnIterator(TRACE_FILE, 5000);
                 IInorderPipeline pl = new InorderPipeline(new BranchPredictor(bp, bigBtb), ic, dc);
                 pl.run(uiter);
-                System.out.println("size: " + size + " ways: " + way + " cycles: " + pl.getCycles());
+                System.out.println("size: " + size + " ways: " + way + " IPC: " + pl.getInsns()*1.0/pl.getCycles());
             }
         }
     }

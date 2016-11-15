@@ -113,7 +113,9 @@ public class Cache implements ICache {
         private void updateLRU(Line line) {
             int prevLRU = line.LRU;
             line.LRU = lines.length - 1;
+            int cur = next;
             for (int i = 0; i < lines.length; i++) {
+                if (i == cur) continue;
                 if (lines[i].LRU > prevLRU) { lines[i].LRU--; }
                 if (lines[i].LRU == 0) next = i;
             }
