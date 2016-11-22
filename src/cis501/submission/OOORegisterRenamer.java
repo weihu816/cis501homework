@@ -1,6 +1,5 @@
 package cis501.submission;
 
-import cis501.ArchReg;
 import cis501.IOOORegisterRenamer;
 import cis501.Insn;
 import cis501.PhysReg;
@@ -9,7 +8,8 @@ import java.util.Map;
 
 public class OOORegisterRenamer implements IOOORegisterRenamer {
 
-    public OOORegisterRenamer(int pregs) {}
+    public OOORegisterRenamer(int pregs) {
+    }
 
     @Override
     public int availablePhysRegs() {
@@ -17,7 +17,7 @@ public class OOORegisterRenamer implements IOOORegisterRenamer {
     }
 
     @Override
-    public PhysReg allocateReg(ArchReg ar) {
+    public PhysReg allocateReg(int ar) {
         return null;
     }
 
@@ -27,12 +27,13 @@ public class OOORegisterRenamer implements IOOORegisterRenamer {
     }
 
     @Override
-    public PhysReg a2p(ArchReg ar) {
+    public PhysReg a2p(int ar) {
         return null;
     }
 
     @Override
-    public Map<ArchReg, PhysReg> rename(Insn i) {
-        return null;
+    public void rename(Insn i, Map<Short, PhysReg> inputs, Map<Short, PhysReg> outputs) {
+
     }
+
 }

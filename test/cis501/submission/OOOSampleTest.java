@@ -36,23 +36,23 @@ public class OOOSampleTest {
 
         @Test
         public void testInitialMapping() {
-            assertEquals(1, rr.a2p(new ArchReg(1)).get());
-            assertEquals(10, rr.a2p(new ArchReg(10)).get());
+            assertEquals(1, rr.a2p(1).get());
+            assertEquals(10, rr.a2p(10).get());
         }
 
         @Test
         public void testAllocate() {
-            assertEquals(50, rr.allocateReg(new ArchReg(1)).get());
-            assertEquals(51, rr.allocateReg(new ArchReg(2)).get());
+            assertEquals(50, rr.allocateReg(1).get());
+            assertEquals(51, rr.allocateReg(2).get());
         }
 
         @Test
         public void testFreeReallocate() {
             rr.freeReg(new PhysReg(1)); // goes to back of free list
             for (int i = 0; i < 10; i++) { // empty the free list, except for p1
-                assertEquals(50 + i, rr.allocateReg(new ArchReg(i)).get());
+                assertEquals(50 + i, rr.allocateReg(i).get());
             }
-            assertEquals(1, rr.allocateReg(new ArchReg(10)).get()); // p1 gets reused
+            assertEquals(1, rr.allocateReg(10).get()); // p1 gets reused
         }
     }
 
