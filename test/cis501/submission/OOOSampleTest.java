@@ -8,6 +8,7 @@ import org.junit.runner.RunWith;
 
 import java.util.Collection;
 
+import static cis501.IOOORegisterRenamer.NUM_ARCH_REGS;
 import static junit.framework.TestCase.assertFalse;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -31,7 +32,7 @@ public class OOOSampleTest {
 
         @Test
         public void testInitialFreelist() {
-            assertEquals(10, rr.availablePhysRegs());
+            assertEquals(PREGS - NUM_ARCH_REGS, rr.availablePhysRegs());
         }
 
         @Test
@@ -42,23 +43,23 @@ public class OOOSampleTest {
 
         @Test
         public void testAllocate() {
-            assertEquals(50, rr.allocateReg(1).get());
-            assertEquals(51, rr.allocateReg(2).get());
+            assertEquals(NUM_ARCH_REGS, rr.allocateReg(1).get());
+            assertEquals(NUM_ARCH_REGS+1, rr.allocateReg(2).get());
         }
 
         @Test
         public void testFreeReallocate() {
             rr.freeReg(new PhysReg(1)); // goes to back of free list
-            for (int i = 0; i < 10; i++) { // empty the free list, except for p1
-                assertEquals(50 + i, rr.allocateReg(i).get());
+            for (int i = 0; i < (PREGS - NUM_ARCH_REGS); i++) { // empty the free list, except for p1
+                assertEquals(NUM_ARCH_REGS + i, rr.allocateReg(i).get());
             }
-            assertEquals(1, rr.allocateReg(10).get()); // p1 gets reused
+            assertEquals(1, rr.allocateReg(PREGS - NUM_ARCH_REGS).get()); // p1 gets reused
         }
     }
 
     public static class LSQSingleByteTests {
 
-        private OOOLoadStoreQueue lsq;
+        private IOOOLoadStoreQueue lsq;
 
         @Before
         public void setup() {
