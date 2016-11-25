@@ -50,10 +50,11 @@ public class OOOSampleTest {
         @Test
         public void testFreeReallocate() {
             rr.freeReg(new PhysReg(1)); // goes to back of free list
-            for (int i = 0; i < (PREGS - NUM_ARCH_REGS); i++) { // empty the free list, except for p1
-                assertEquals(NUM_ARCH_REGS + i, rr.allocateReg(i).get());
+            int i = 0;
+            for (; i < (PREGS - NUM_ARCH_REGS); i++) { // empty the free list, except for p1
+                assertEquals(NUM_ARCH_REGS + i, rr.allocateReg(i % NUM_ARCH_REGS).get());
             }
-            assertEquals(1, rr.allocateReg(PREGS - NUM_ARCH_REGS).get()); // p1 gets reused
+            assertEquals(1, rr.allocateReg(i % NUM_ARCH_REGS).get()); // p1 gets reused
         }
     }
 
