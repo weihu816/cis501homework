@@ -54,17 +54,6 @@ public class OOORegisterRenamer implements IOOORegisterRenamer {
         freeList.addLast(pr);
     }
 
-    /**
-     * Free 1 or 2 (Write_Condition) physical regs at commit time.
-     * @param i Insn to commit
-     */
-    public void commitFreer(Insn i) {
-        commitFreeHelper();
-        if(i.condCode == CondCodes.WriteCC || i.condCode == CondCodes.ReadWriteCC) {
-            commitFreeHelper();
-        }
-    }
-
     private void commitFreeHelper() {
         if (toFreeList.size() == 0) return;
         PhysReg toFree = toFreeList.removeFirst();
@@ -79,18 +68,22 @@ public class OOORegisterRenamer implements IOOORegisterRenamer {
     @Override
     public void rename(Insn i, Map<Short, PhysReg> inputs, Map<Short, PhysReg> outputs) {
         // inputs
-        inputs.put(i.srcReg1, a2p(i.srcReg1));
-        inputs.put(i.srcReg2, a2p(i.srcReg2));
+        if(i.srcReg1 != -1) inputs.put(i.srcReg1, a2p(i.srcReg1));
+        if(i.srcReg2 != -1) inputs.put(i.srcReg2, a2p(i.srcReg2));
         if(i.condCode == CondCodes.ReadCC || i.condCode == CondCodes.ReadWriteCC) {
             inputs.put(IOOORegisterRenamer.COND_CODE_ARCH_REG,a2p(IOOORegisterRenamer.COND_CODE_ARCH_REG));
         }
 
         // outputs
-        toFreeList.addLast(a2p(i.dstReg));
-        mapTable[i.dstReg] = allocateReg(i.dstReg);
-        outputs.put(i.dstReg, a2p(i.dstReg));
+        if (i.dstReg != -1) {
+            toFreeList.addLast(a2p(i.dstReg));
+            if (availablePhysRegs() == 0) commitFreeHelper();
+            mapTable[i.dstReg] = allocateReg(i.dstReg);
+            outputs.put(i.dstReg, a2p(i.dstReg));
+        }
         if(i.condCode == CondCodes.WriteCC || i.condCode == CondCodes.ReadWriteCC) {
             toFreeList.addLast(a2p(IOOORegisterRenamer.COND_CODE_ARCH_REG));
+            if (availablePhysRegs() == 0) commitFreeHelper();
             mapTable[IOOORegisterRenamer.COND_CODE_ARCH_REG] = allocateReg(IOOORegisterRenamer.COND_CODE_ARCH_REG);
             outputs.put(IOOORegisterRenamer.COND_CODE_ARCH_REG,a2p(IOOORegisterRenamer.COND_CODE_ARCH_REG));
         }

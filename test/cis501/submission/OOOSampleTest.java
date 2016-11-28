@@ -1070,7 +1070,7 @@ public class OOOSampleTest {
             };
 
             // TODO: update this path
-            String traceFile = "path/to/your/streamcluster-10M-v1.trace.gz";
+            String traceFile = "/Users/dongniwang/Desktop/CIS_501/501hw2/streamcluster-10M-v1.trace.gz";
             Map<Short, PhysReg> actualInPregs = new HashMap<>();
             Map<Short, PhysReg> actualOutPregs = new HashMap<>();
             int inum = 0;

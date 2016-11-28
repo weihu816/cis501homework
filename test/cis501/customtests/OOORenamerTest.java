@@ -103,18 +103,6 @@ public class OOORenamerTest {
 
         // test commit Free
         assertEquals(rr.availablePhysRegs(), PREGS-NUM_ARCH_REGS-4);
-        rr.commitFreer(xor);
-        rr.commitFreer(add);
-        rr.commitFreer(sub);
-        rr.commitFreer(addi);
-        assertEquals(rr.availablePhysRegs(), PREGS-NUM_ARCH_REGS);
-        for (int i = 0; i < (PREGS - NUM_ARCH_REGS-4); i++) { // empty the free list, except for p1
-            assertEquals(NUM_ARCH_REGS+i+4, rr.allocateReg(i % NUM_ARCH_REGS).get());
-        }
-        assertEquals(3, rr.allocateReg(1).get());
-        assertEquals(4, rr.allocateReg(1).get());
-        assertEquals(NUM_ARCH_REGS, rr.allocateReg(1).get());
-        assertEquals(1, rr.allocateReg(1).get());
     }
 
     /**
@@ -154,19 +142,6 @@ public class OOORenamerTest {
         assertEquals(outputs.get((short)3).hashCode(), NUM_ARCH_REGS+3);
         assertEquals(outputs.get(IOOORegisterRenamer.COND_CODE_ARCH_REG).hashCode(), NUM_ARCH_REGS+4);
 
-        // test commit Free
         assertEquals(rr.availablePhysRegs(), PREGS-NUM_ARCH_REGS-5);
-        rr.commitFreer(xor);
-        rr.commitFreer(add);
-        rr.commitFreer(sub);
-        assertEquals(rr.availablePhysRegs(), PREGS-NUM_ARCH_REGS);
-        for (int i = 0; i < (PREGS - NUM_ARCH_REGS-5); i++) { // empty the free list, except for p1
-            assertEquals(NUM_ARCH_REGS+i+5, rr.allocateReg(i % NUM_ARCH_REGS).get());
-        }
-        assertEquals(3, rr.allocateReg(1).get());
-        assertEquals(4, rr.allocateReg(1).get());
-        assertEquals(NUM_ARCH_REGS-1, rr.allocateReg(1).get());
-        assertEquals(NUM_ARCH_REGS, rr.allocateReg(1).get());
-        assertEquals(NUM_ARCH_REGS+2, rr.allocateReg(1).get());
     }
 }
