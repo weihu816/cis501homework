@@ -63,8 +63,9 @@ public class OOOSampleTest {
         public void testTrace500() {
             /* Note: Each element in this array contains the correct input physical registers for
             each of the first 500 insns of the streamcluster trace file (output physical registers
-            are in a separate array, below). The code after the arrays uses them to validate your
-            register renaming implementation. */
+            are in a separate array, below). These renamed registers assume the use of 60 physical
+            registers. The code after the arrays uses them to validate your register renaming
+            implementation. */
             final int[][] inputPregs = new int[][]{{3}, // 0: cmp r3, #1
                     {17}, // 1: bne.w #0x4006e74
                     {}, // 2: mov.w r8, #1
