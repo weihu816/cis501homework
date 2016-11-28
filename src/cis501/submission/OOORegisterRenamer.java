@@ -54,6 +54,9 @@ public class OOORegisterRenamer implements IOOORegisterRenamer {
         freeList.addLast(pr);
     }
 
+    /**
+     * Free the oldest committed physical register
+     */
     private void commitFreeHelper() {
         if (toFreeList.size() == 0) return;
         PhysReg toFree = toFreeList.removeFirst();
@@ -75,18 +78,22 @@ public class OOORegisterRenamer implements IOOORegisterRenamer {
         }
 
         // outputs
-        if (i.dstReg != -1) {
-            toFreeList.addLast(a2p(i.dstReg));
-            if (availablePhysRegs() == 0) commitFreeHelper();
-            mapTable[i.dstReg] = allocateReg(i.dstReg);
-            outputs.put(i.dstReg, a2p(i.dstReg));
-        }
+        if (i.dstReg != -1) renameOutputEle(i.dstReg, outputs);
         if(i.condCode == CondCodes.WriteCC || i.condCode == CondCodes.ReadWriteCC) {
-            toFreeList.addLast(a2p(IOOORegisterRenamer.COND_CODE_ARCH_REG));
-            if (availablePhysRegs() == 0) commitFreeHelper();
-            mapTable[IOOORegisterRenamer.COND_CODE_ARCH_REG] = allocateReg(IOOORegisterRenamer.COND_CODE_ARCH_REG);
-            outputs.put(IOOORegisterRenamer.COND_CODE_ARCH_REG,a2p(IOOORegisterRenamer.COND_CODE_ARCH_REG));
+            renameOutputEle(IOOORegisterRenamer.COND_CODE_ARCH_REG, outputs);
         }
+    }
+
+    /**
+     * helper function: rename output
+     * @param archReg the arch register to free
+     * @param outputs
+     */
+    public void renameOutputEle(Short archReg, Map<Short, PhysReg> outputs) {
+        toFreeList.addLast(a2p(archReg));
+        if (availablePhysRegs() == 0) commitFreeHelper();
+        mapTable[archReg] = allocateReg(archReg);
+        outputs.put(archReg,a2p(archReg));
     }
 
 }
