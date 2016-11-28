@@ -78,7 +78,7 @@ public class OOORegisterRenamer implements IOOORegisterRenamer {
 
     @Override
     public void rename(Insn i, Map<Short, PhysReg> inputs, Map<Short, PhysReg> outputs) {
-        // input
+        // inputs
         inputs.put(i.srcReg1, a2p(i.srcReg1));
         inputs.put(i.srcReg2, a2p(i.srcReg2));
         if(i.condCode == CondCodes.ReadCC || i.condCode == CondCodes.ReadWriteCC) {
