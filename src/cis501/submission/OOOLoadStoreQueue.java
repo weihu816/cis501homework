@@ -92,7 +92,7 @@ public class OOOLoadStoreQueue implements IOOOLoadStoreQueue {
             }
             result = result << 8;
             if (storeHandle != null) {
-                handle.addForwardFrom(storeHandle.getBday());
+                handle.addForwardFrom(curAddress, storeHandle.getBday());
                 // Extract the byte value
                 result |= storeHandle.getByte(curAddress);
             }
@@ -102,11 +102,12 @@ public class OOOLoadStoreQueue implements IOOOLoadStoreQueue {
 
     @Override
     public Collection<? extends LoadHandle> executeStore(StoreHandle handle, long address, long value) {
+        Set<LoadHandle> set = new HashSet<>();
+        if (handle.isDone()) return set;
         handle.setValue(value);
         handle.setAddress(address);
         handle.done();
 
-        List<LoadHandle> list = new Vector<>();
         final int size = handle.getSize();
         for (int i = 0; i < size; i++) {
             long curAddress = address + i;
@@ -114,15 +115,17 @@ public class OOOLoadStoreQueue implements IOOOLoadStoreQueue {
             while (iterator.hasNext()) {
                 LoadHandle next = iterator.next();
                 if (next.isDone() && next.containAddress(curAddress) && next.getBday() > handle.getBday()) {
-                    if (handle.getBday() > next.getLatestForwardFrom()) {
-                        list.add(next);
+                    if (handle.getBday() > next.getLatestForwardFrom(curAddress)) {
+                        set.add(next);
                         // TODO: How to squash
+                        // next.squash();
+                        // next.addForwardFrom(handle.getBday());
+                        // ......
                     }
                 }
             }
         }
-
-        return list;
+        return set;
     }
 }
 
@@ -134,7 +137,8 @@ class LoadHandleImpl implements LoadHandle {
     long addr, bday;
     boolean committed = false, isDone = false;
 
-    Queue<Long> forwardFrom = new PriorityQueue<>(Collections.reverseOrder());
+//    Queue<Long> forwardFrom = new PriorityQueue<>(Collections.reverseOrder());
+    Map<Long, Long> forwardFrom = new HashMap<>();
     List<Long> addresses = new Vector<>();
 
     public LoadHandleImpl(long bday, int size) {
@@ -152,10 +156,13 @@ class LoadHandleImpl implements LoadHandle {
     }
 
     @Override
-    public void addForwardFrom(long addr) { this.forwardFrom.add(addr); }
+    public void addForwardFrom(long addr, long fromBday) { this.forwardFrom.put(addr, fromBday); }
 
     @Override
     public void done() { this.isDone = true; }
+
+    @Override
+    public void squash() { this.isDone = false; }
 
     @Override
     public long getAddress() { return this.addr;}
@@ -166,9 +173,9 @@ class LoadHandleImpl implements LoadHandle {
     }
 
     @Override
-    public long getLatestForwardFrom() {
-        if (forwardFrom.isEmpty()) return -1;
-        return forwardFrom.peek();
+    public long getLatestForwardFrom(long addr) {
+        if (!forwardFrom.containsKey(addr)) return -1;
+        return forwardFrom.get(addr);
     }
 
     @Override

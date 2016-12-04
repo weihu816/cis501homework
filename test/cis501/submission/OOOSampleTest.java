@@ -1330,5 +1330,26 @@ public class OOOSampleTest {
             assertTrue(lsq.executeStore(lsq.dispatchStore(1), 0xB, 0x44).isEmpty());
             assertEquals(0x11220044, lsq.executeLoad(lsq.dispatchLoad(4), 0x8));
         }
+
+        @Test
+        public void testMultiByte8() {
+            assertTrue(lsq.executeStore(lsq.dispatchStore(4), 0x8, 0x22222222).isEmpty());
+            assertTrue(lsq.executeStore(lsq.dispatchStore(4), 0x5, 0x11111111).isEmpty());
+            assertTrue(lsq.executeStore(lsq.dispatchStore(4), 0xB, 0x44444444).isEmpty());
+            StoreHandle s1 = lsq.dispatchStore(1);
+            StoreHandle s2 = lsq.dispatchStore(1);
+            StoreHandle s3 = lsq.dispatchStore(4);
+            LoadHandle l = lsq.dispatchLoad(4);
+            assertEquals(0x11222244, lsq.executeLoad(l, 0x8));
+            Collection<? extends LoadHandle> squashed1 = lsq.executeStore(s1, 0xA, 0x33);
+            assertTrue(squashed1.contains(l));
+            assertEquals(0x11223344, lsq.executeLoad(l, 0x8));
+            Collection<? extends LoadHandle> squashed2 = lsq.executeStore(s2, 0xC, 0x99);
+            assertTrue(!squashed2.contains(l));
+            assertEquals(0x11223344, lsq.executeLoad(l, 0x8));
+            Collection<? extends LoadHandle> squashed3 = lsq.executeStore(s3, 0x8, 0x99999999);
+            assertTrue(squashed3.contains(l));
+            assertEquals(0x99999999L, lsq.executeLoad(l, 0x8));
+        }
     }
 }
