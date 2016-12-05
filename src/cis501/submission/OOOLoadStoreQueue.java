@@ -117,10 +117,6 @@ public class OOOLoadStoreQueue implements IOOOLoadStoreQueue {
                 if (next.isDone() && next.containAddress(curAddress) && next.getBday() > handle.getBday()) {
                     if (handle.getBday() > next.getLatestForwardFrom(curAddress)) {
                         set.add(next);
-                        // TODO: How to squash
-                        // next.squash();
-                        // next.addForwardFrom(handle.getBday());
-                        // ......
                     }
                 }
             }
@@ -137,7 +133,6 @@ class LoadHandleImpl implements LoadHandle {
     long addr, bday;
     boolean committed = false, isDone = false;
 
-//    Queue<Long> forwardFrom = new PriorityQueue<>(Collections.reverseOrder());
     Map<Long, Long> forwardFrom = new HashMap<>();
     List<Long> addresses = new Vector<>();
 
@@ -160,9 +155,6 @@ class LoadHandleImpl implements LoadHandle {
 
     @Override
     public void done() { this.isDone = true; }
-
-    @Override
-    public void squash() { this.isDone = false; }
 
     @Override
     public long getAddress() { return this.addr;}

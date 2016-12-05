@@ -5,7 +5,6 @@ public interface LoadHandle {
     void setAddress(long addr);
     void addForwardFrom(long addr, long fromAddr);
     void done();
-    void squash();
 
     int getSize();
     long getAddress();
