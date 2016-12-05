@@ -1330,5 +1330,23 @@ public class OOOSampleTest {
             assertTrue(lsq.executeStore(lsq.dispatchStore(1), 0xB, 0x44).isEmpty());
             assertEquals(0x11220044, lsq.executeLoad(lsq.dispatchLoad(4), 0x8));
         }
+
+        @Test
+        public void testMultiByte6() {
+            StoreHandle store1 = lsq.dispatchStore(2);
+            StoreHandle store2 = lsq.dispatchStore(1);
+            LoadHandle load = lsq.dispatchLoad(2);
+
+            assertEquals(0, lsq.executeLoad(load, 0xA));
+
+            Collection<? extends LoadHandle> squashed = lsq.executeStore(store2, 0xA, 0x33);
+            assertTrue(squashed.contains(load));
+            assertEquals(1, squashed.size());
+
+            squashed = lsq.executeStore(store1, 0xA, 0x1122);
+            assertTrue(squashed.contains(load));
+            assertEquals(1, squashed.size());
+        }
+
     }
 }
